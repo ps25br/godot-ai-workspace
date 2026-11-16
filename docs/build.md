@@ -136,3 +136,11 @@ O repositório público está disponível em [github.com/ps25br/godot-ai-workspa
 - Executável baixado em: `C:\Users\win10\Documents\Godot AI Workspace-artifacts\run-43961599237\godot.windows.editor.x86_64.exe`.
 
 A primeira execução (`43955729705`) compilou o executável, mas falhou na verificação por tratar um `$LASTEXITCODE` nulo do PowerShell como erro. A verificação foi corrigida no commit `0c6cb3a`; a segunda execução passou e publicou o artifact. Nenhuma alteração no runtime foi necessária.
+
+Para a etapa 03, a primeira execução ([run 43963341537](https://github.com/ps25br/godot-ai-workspace/actions/runs/43963341537)) falhou por uma dependência de include: o novo arquivo precisava da definição completa de `EditorMainScreen`. O include foi corrigido no commit `90bf29d`; a compilação aprovada foi [run 43963807986](https://github.com/ps25br/godot-ai-workspace/actions/runs/43963807986).
+
+- Artifact da etapa 03: `godot-ai-workspace-windows-x64`.
+- Versão verificada: `4.7.2.stable.gh.90bf29d3b`.
+- `--version`: código de saída 0.
+- Inicialização headless sem projeto externo: código de saída 0.
+- Executável baixado em: `C:\Users\win10\Documents\Godot AI Workspace-artifacts\run-43963807986\godot.windows.editor.x86_64.exe`.
