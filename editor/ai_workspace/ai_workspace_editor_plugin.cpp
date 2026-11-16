@@ -29,6 +29,7 @@
 
 #include "ai_workspace_editor_plugin.h"
 
+#include "editor/editor_main_screen.h"
 #include "editor/editor_node.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/center_container.h"
