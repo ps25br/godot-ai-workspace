@@ -63,7 +63,6 @@ Para conferir a origem e a versão atual:
 ```powershell
 git remote -v
 git branch --show-current
-git describe --tags --exact-match HEAD
+git describe --tags --abbrev=0 HEAD
 git rev-parse HEAD
 ```
-
