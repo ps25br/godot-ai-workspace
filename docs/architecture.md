@@ -11,3 +11,9 @@ A etapa 03 adiciona `AIWorkspaceEditorPlugin` em `editor/ai_workspace/`. A class
 O plugin é registrado pelo `EditorNode` com `add_editor_plugin()`. A própria implementação existente de `EditorMainScreen` reconhece plugins com `has_main_screen()`, cria o botão com `get_plugin_name()` e alterna a visibilidade das telas. Assim, 2D, 3D, Script, Game e Asset Store continuam usando o fluxo nativo, sem alteração no runtime ou em `EditorMainScreen`.
 
 A interface inicial contém somente o título, a descrição e o estado `No agent connected`. Conversas, agentes, MCP, terminal, Inspector inteligente, animação e Asset Slots permanecem fora do escopo desta etapa.
+
+## Interface estrutural do workspace
+
+A etapa 04 mantém `AIWorkspaceEditorPlugin` como responsável apenas pelo ciclo de vida da tela principal e concentra o layout em `AIWorkspaceMainScreen`. A tela utiliza somente controles GUI nativos e estilos do tema do editor: um cabeçalho de estado, uma área de conversa rolável com compositor inativo e um painel lateral de contexto que pode ser recolhido.
+
+Os controles de entrada e as regiões de mensagens e contexto são mantidos como pontos estruturais para evolução posterior, sem implementar conexão com agentes, execução de comandos ou protocolos externos. O painel contextual reserva espaço para cena, nó, recursos e operações sem duplicar o viewport ou o Inspector nativos.

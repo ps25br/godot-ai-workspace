@@ -31,12 +31,12 @@
 
 #include "editor/plugins/editor_plugin.h"
 
-class CenterContainer;
+class AIWorkspaceMainScreen;
 
 class AIWorkspaceEditorPlugin : public EditorPlugin {
 	GDCLASS(AIWorkspaceEditorPlugin, EditorPlugin);
 
-	CenterContainer *ai_workspace = nullptr;
+	AIWorkspaceMainScreen *ai_workspace = nullptr;
 
 public:
 	String get_plugin_name() const override;

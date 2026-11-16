@@ -29,11 +29,10 @@
 
 #include "ai_workspace_editor_plugin.h"
 
+#include "ai_workspace_main_screen.h"
+
 #include "editor/editor_main_screen.h"
 #include "editor/editor_node.h"
-#include "scene/gui/box_container.h"
-#include "scene/gui/center_container.h"
-#include "scene/gui/label.h"
 
 String AIWorkspaceEditorPlugin::get_plugin_name() const {
 	return TTRC("AI Workspace");
@@ -46,31 +45,7 @@ void AIWorkspaceEditorPlugin::make_visible(bool p_visible) {
 }
 
 AIWorkspaceEditorPlugin::AIWorkspaceEditorPlugin() {
-	ai_workspace = memnew(CenterContainer);
-	ai_workspace->set_name("AIWorkspace");
-	ai_workspace->set_h_size_flags(Control::SIZE_EXPAND_FILL);
-	ai_workspace->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-
-	VBoxContainer *content = memnew(VBoxContainer);
-	content->set_custom_minimum_size(Size2(480, 0));
-	content->set_alignment(BoxContainer::ALIGNMENT_CENTER);
-	ai_workspace->add_child(content);
-
-	Label *title = memnew(Label);
-	title->set_text(TTRC("AI Workspace"));
-	title->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
-	content->add_child(title);
-
-	Label *description = memnew(Label);
-	description->set_text(TTRC("Build and edit Godot projects with your preferred AI coding agent."));
-	description->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
-	description->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
-	content->add_child(description);
-
-	Label *status = memnew(Label);
-	status->set_text(TTRC("No agent connected"));
-	status->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
-	content->add_child(status);
+	ai_workspace = memnew(AIWorkspaceMainScreen);
 
 	EditorNode::get_singleton()->get_editor_main_screen()->get_control()->add_child(ai_workspace);
 	ai_workspace->hide();
