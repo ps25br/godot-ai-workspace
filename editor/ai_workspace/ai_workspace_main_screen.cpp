@@ -194,6 +194,7 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	message_history->add_child(empty_state_center);
 
 	VBoxContainer *empty_state = memnew(VBoxContainer);
+	empty_state->set_custom_minimum_size(Size2(320, 0) * EDSCALE);
 	empty_state->set_alignment(BoxContainer::ALIGNMENT_CENTER);
 	empty_state_center->add_child(empty_state);
 
