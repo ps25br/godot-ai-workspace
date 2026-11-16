@@ -122,3 +122,17 @@ git push -u origin ai-workspace
 Não use o repositório oficial da Godot como `origin` e não execute `git push` sem autorização. O remote `upstream` deve continuar apontando para a Godot oficial.
 
 Depois de futuras alterações em C++, confirme o estado local, faça commit apenas das alterações pretendidas e repita a execução manual do workflow. Compare o log, confirme `--version` e baixe o novo artifact antes de utilizá-lo.
+
+## Execução remota verificada
+
+O repositório público está disponível em [github.com/ps25br/godot-ai-workspace](https://github.com/ps25br/godot-ai-workspace), com `ai-workspace` como branch padrão.
+
+- Workflow: [AI Workspace - Windows Build](https://github.com/ps25br/godot-ai-workspace/actions/workflows/ai-workspace-windows.yml)
+- Execução aprovada: [run 43961599237](https://github.com/ps25br/godot-ai-workspace/actions/runs/43961599237)
+- Artifact: `godot-ai-workspace-windows-x64`, confirmado com retenção de 7 dias.
+- Versão verificada: `4.7.2.stable.gh.0c6cb3abc`.
+- `--version`: código de saída 0.
+- Inicialização local headless sem projeto externo (`--headless --editor --quit`): código de saída 0.
+- Executável baixado em: `C:\Users\win10\Documents\Godot AI Workspace-artifacts\run-43961599237\godot.windows.editor.x86_64.exe`.
+
+A primeira execução (`43955729705`) compilou o executável, mas falhou na verificação por tratar um `$LASTEXITCODE` nulo do PowerShell como erro. A verificação foi corrigida no commit `0c6cb3a`; a segunda execução passou e publicou o artifact. Nenhuma alteração no runtime foi necessária.
