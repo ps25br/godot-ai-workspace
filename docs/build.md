@@ -66,3 +66,59 @@ git branch --show-current
 git describe --tags --abbrev=0 HEAD
 git rev-parse HEAD
 ```
+
+## Compilação remota com GitHub Actions
+
+O workflow independente `.github/workflows/ai-workspace-windows.yml` é acionado somente por `workflow_dispatch`. Ele usa o runner `windows-latest`, MSVC, Python x64, SCons 4.10.1 e as ações locais reutilizáveis da Godot para dependências, compilação e cache.
+
+A configuração produz somente o editor Windows `x86_64`, com `debug_symbols=no`, `lto=none` e sem templates de exportação. Os componentes opcionais D3D12, ANGLE, AccessKit e WinRT são desativados nesta primeira versão para evitar downloads e dependências adicionais; Vulkan, OpenGL, editor 2D/3D, GDScript, Inspector, animação, física e os módulos padrão permanecem habilitados.
+
+### Iniciar uma compilação manual
+
+1. Publique a branch `ai-workspace` em um repositório GitHub próprio, depois abra a aba **Actions**.
+2. Selecione **AI Workspace - Windows Build**.
+3. Clique em **Run workflow**, escolha `ai-workspace` e confirme.
+
+O workflow possui apenas a permissão `contents: read`. Ele não publica código, cria releases nem envia alterações para qualquer remote.
+
+### Acompanhar logs e baixar o artifact
+
+Abra a execução em **Actions**, selecione o job **Windows x86_64 editor** e expanda cada etapa para acompanhar os logs. O resultado só é publicado depois de o arquivo existir e passar por `--version`.
+
+Ao final, na página da execução, use a seção **Artifacts** para baixar `godot-ai-workspace-windows-x64`. O artifact contém apenas `godot.windows.editor.x86_64.exe` e tem retenção inicial de 7 dias.
+
+Extraia o ZIP baixado para uma pasta própria e execute no PowerShell:
+
+```powershell
+& "C:\caminho\para\godot.windows.editor.x86_64.exe" --version
+& "C:\caminho\para\godot.windows.editor.x86_64.exe"
+```
+
+Use a versão modificada somente com projetos e cópias autorizados. O executável não substitui a instalação oficial da Godot.
+
+### Diagnóstico de falhas
+
+- **Falha em Setup Python and SCons:** confirme no log a versão do Python e a instalação de SCons feita pela ação local `godot-deps`.
+- **Falha ao detectar MSVC:** confirme que o runner é `windows-latest` e que o log não indica incompatibilidade com o Windows SDK.
+- **Falha em dependência opcional:** mantenha os switches `d3d12=no`, `accesskit=no`, `angle=no` e `winrt=no`; eles evitam dependências externas nesta primeira versão.
+- **Executável ausente:** verifique a etapa de compilação e o conteúdo de `bin/`. A etapa `Verify editor executable` falha explicitamente quando `bin/godot.windows.editor.x86_64.exe` não existe.
+- **Falha no `--version`:** trate como build não validado; o artifact não deve ser considerado utilizável.
+
+Falhas de compilação devem ser reproduzidas observando a primeira mensagem de erro do compilador, não apenas o resumo final do job. Depois de corrigir C++ ou configuração, faça um novo commit e execute novamente o workflow manual.
+
+### Cache do SCons
+
+O workflow reutiliza as ações oficiais locais `godot-cache-restore` e `godot-cache-save`, com a chave `ai-workspace-windows-editor`. O cache contém somente a pasta de cache do SCons e pode acelerar compilações posteriores. A restauração e o salvamento são tolerantes a falhas para que um problema de cache não oculte uma falha real de compilação. Não foi adicionada uma infraestrutura de cache paralela.
+
+## Publicação em um repositório próprio
+
+O repositório local atualmente não possui `origin`. Para publicar a branch, crie primeiro um repositório próprio no GitHub — preferencialmente público se isso for compatível com a política e a licença aplicáveis — e, somente após autorização explícita:
+
+```powershell
+git remote add origin https://github.com/SEU_USUARIO/godot-ai-workspace.git
+git push -u origin ai-workspace
+```
+
+Não use o repositório oficial da Godot como `origin` e não execute `git push` sem autorização. O remote `upstream` deve continuar apontando para a Godot oficial.
+
+Depois de futuras alterações em C++, confirme o estado local, faça commit apenas das alterações pretendidas e repita a execução manual do workflow. Compare o log, confirme `--version` e baixe o novo artifact antes de utilizá-lo.

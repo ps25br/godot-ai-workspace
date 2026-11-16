@@ -1,0 +1,79 @@
+name: AI Workspace - Windows Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SCONS_FLAGS: >-
+    arch=x86_64
+    dev_mode=yes
+    module_text_server_fb_enabled=yes
+    debug_symbols=no
+    lto=none
+    use_mingw=no
+    use_llvm=no
+    d3d12=no
+    accesskit=no
+    angle=no
+    winrt=no
+
+jobs:
+  build-windows-editor:
+    name: Windows x86_64 editor
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Restore Godot SCons cache
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: ai-workspace-windows-editor
+        continue-on-error: true
+
+      - name: Setup Python and SCons
+        uses: ./.github/actions/godot-deps
+        with:
+          python-version: 3.x
+          python-arch: x64
+          scons-version: 4.10.1
+
+      - name: Build editor with MSVC
+        uses: ./.github/actions/godot-build
+        with:
+          platform: windows
+          target: editor
+          scons-flags: ${{ env.SCONS_FLAGS }} windows_subsystem=gui
+
+      - name: Save Godot SCons cache
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: ai-workspace-windows-editor
+        continue-on-error: true
+
+      - name: Verify editor executable
+        shell: pwsh
+        run: |
+          $editor = Join-Path $env:GITHUB_WORKSPACE 'bin/godot.windows.editor.x86_64.exe'
+          if (-not (Test-Path -LiteralPath $editor -PathType Leaf)) {
+            throw "Expected editor executable was not produced: $editor"
+          }
+          & $editor --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "The editor --version check failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Upload editor artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-ai-workspace-windows-x64
+          path: bin/godot.windows.editor.x86_64.exe
+          if-no-files-found: error
+          retention-days: 7
