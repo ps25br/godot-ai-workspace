@@ -33,6 +33,7 @@
 
 #include "editor/editor_main_screen.h"
 #include "editor/editor_node.h"
+#include "scene/gui/box_container.h"
 
 String AIWorkspaceEditorPlugin::get_plugin_name() const {
 	return TTRC("AI Workspace");
