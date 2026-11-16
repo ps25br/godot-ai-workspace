@@ -1,3 +1,4 @@
+# Manual-only cloud build for the Godot AI Workspace editor.
 name: AI Workspace - Windows Build
 
 on:
