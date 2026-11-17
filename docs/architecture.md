@@ -75,3 +75,7 @@ O commit `db712c98765` foi compilado remotamente e validado com um projeto tempo
 A etapa 08 adiciona `AIWorkspaceAgentBridge` em `editor/ai_workspace/`. Ele usa as APIs nativas `TCPServer` e `StreamPeerTCP`, faz bind somente em `127.0.0.1:47831` e processa JSON delimitado por linha na thread principal do editor. O Bridge começa desativado, gera um segredo de sessão por ativação e reutiliza `AIWorkspaceContextService` e `AIWorkspaceCommandRouter` sem duplicar suas regras.
 
 `bridge.ping` e `context.get` são somente leitura. `command.execute` cria uma solicitação pendente e só é encaminhado ao Router após aprovação explícita na interface. O transporte não executa shell, não cria novos comandos e não altera o runtime.
+
+### Validação da etapa 08
+
+O artifact do commit `d70fac7b638` foi validado com o projeto temporário da etapa 07. O Bridge recusou conexão quando iniciado sem a flag de ativação, respondeu `bridge.ping` e `context.get` após ativação explícita, rejeitou segredo incorreto, JSON inválido, protocolo inválido, método desconhecido e mensagens acima de 64 KiB. Um `node.create` ficou pendente na UI, foi aprovado manualmente e apareceu no contexto; Undo removeu o nó e Redo o restaurou.

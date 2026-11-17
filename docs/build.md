@@ -237,3 +237,7 @@ python tools/ai_workspace_bridge_client.py --secret segredo-de-teste self-test
 ```
 
 O segredo de teste deve ser temporário. A conexão não autoriza comandos mutáveis: cada `command.execute` aguarda **Approve Command**. O cliente de teste e o contrato completo estão em `tools/ai_workspace_bridge_client.py` e `docs/agent-bridge-protocol.md`.
+
+### Validação executada na etapa 08
+
+O commit `d70fac7b638` passou no workflow [44011040757](https://github.com/ps25br/godot-ai-workspace/actions/runs/44011040757). O artifact confirmou `4.7.2.stable.gh.d70fac7b6`; `--version` e `--headless --editor --path <projeto> --quit` terminaram com código 0 e stderr vazio. O cliente Python validou ping, contexto, autenticação, erros de protocolo/JSON/método, limite de mensagem, aprovação de `node.create`, Undo/Redo e desconexão. A interface foi capturada em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\stage08-after-approval-attempt.png`.
