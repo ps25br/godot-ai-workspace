@@ -123,6 +123,14 @@ Não use o repositório oficial da Godot como `origin` e não execute `git push`
 
 Depois de futuras alterações em C++, confirme o estado local, faça commit apenas das alterações pretendidas e repita a execução manual do workflow. Compare o log, confirme `--version` e baixe o novo artifact antes de utilizá-lo.
 
+## Etapa 05 - contexto nativo do projeto
+
+O commit inicial `fa64de55389` adicionou o serviço nativo de contexto, a atualização por seleção/cena e a inspeção JSON somente leitura. A primeira compilação remota ([run 43989803900](https://github.com/ps25br/godot-ai-workspace/actions/runs/43989803900)) passou e gerou o artifact. O executável confirmou `4.7.2.stable.gh.fa64de553`.
+
+Durante a validação headless foram encontrados dois problemas de ciclo de vida: os sinais de cena eram conectados antes do registro completo do editor e a leitura da cena podia consultar um índice vazio. Os commits `73dde725150`, `5766ced11e9` e `e46c76e4364` corrigem respectivamente a origem dos sinais, o include de `callable_mp` e o adiamento da conexão para `make_visible`, além da guarda para nenhuma cena aberta.
+
+As três tentativas autorizadas desta etapa foram usadas. A terceira compilação ([run 43990748072](https://github.com/ps25br/godot-ai-workspace/actions/runs/43990748072)) passou e publicou o artifact, mas corresponde ao commit `5766ced11e9`; a correção final `e46c76e4364` foi publicada depois e ainda precisa de uma nova compilação remota. Portanto, a aba e o JSON não devem ser considerados visualmente validados nesta etapa. Não houve compilação C++ local.
+
 ## Execução remota verificada
 
 O repositório público está disponível em [github.com/ps25br/godot-ai-workspace](https://github.com/ps25br/godot-ai-workspace), com `ai-workspace` como branch padrão.
