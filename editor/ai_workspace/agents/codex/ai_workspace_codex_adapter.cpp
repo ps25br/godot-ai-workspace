@@ -262,7 +262,7 @@ Error AIWorkspaceCodexAdapter::send_instruction(const String &p_instruction) {
 		context_service->refresh();
 		prompt += "\n\nEditor context (read-only JSON):\n" + context_service->get_context_json();
 	}
-	prompt += "\n\nTreat editor context as read-only. Never execute or authorize a mutation. If the user explicitly requests a scene mutation, optionally propose exactly one validated command on a line beginning with AI_WORKSPACE_COMMAND: followed by a JSON object; the Godot UI will require separate approval.";
+	prompt += "\n\nTreat editor context as read-only. Never execute or authorize a mutation. If the user explicitly requests a scene mutation, optionally propose exactly one command on a line beginning with AI_WORKSPACE_COMMAND: followed by a JSON object using the existing Godot Command Router schema, for example {\"command\":\"node.create\",\"args\":{\"parent_path\":\".\",\"type\":\"Node2D\",\"name\":\"CodexEnemy\"}}. Do not invent action, scene_path, node_type, or node_name fields. The Godot UI validates the proposal and requires separate approval.";
 	Dictionary input;
 	input["type"] = "text";
 	input["text"] = prompt;
