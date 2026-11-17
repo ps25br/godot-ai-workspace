@@ -40,6 +40,10 @@ Não há listagem/troca de múltiplas threads remotas, renovação OAuth, login 
 
 ## Validação
 
+### Etapa 10
+
+O código do commit `4d2fde81c47` foi compilado no workflow [44085486259](https://github.com/ps25br/godot-ai-workspace/actions/runs/44085486259). O executável confirmou `4.7.2.stable.gh.4d2fde81c`; o teste headless com projeto temporário terminou com código 0. O CLI real respondeu a `initialize`, `thread/start` e `thread/resume`. A sondagem de turno não concluiu dentro do timeout e a GUI não permaneceu aberta para screenshot, logo streaming visual, Stop e retomada pela interface ainda exigem validação em uma sessão gráfica disponível.
+
 O ambiente local possui `codex-cli 0.163.0`; `codex login status` retornou sucesso sem que credenciais fossem lidas ou exibidas. O handshake e uma inferência real pelo App Server produziram deltas e `turn/completed` com status `completed`.
 
 No artifact do commit `400b3c92a15`, a interface foi validada graficamente com o projeto temporário `stage07-test-project`. A instrução de leitura descreveu a cena real (`res://main.tscn`, raiz `Main`, seleção `Sprite (Sprite2D)`). A solicitação de criação gerou a proposta real `node.create`; **Approve Codex Command** criou `CodexEnemy`, Undo removeu o nó e Redo o restaurou. Uma sessão separada usando **Reject Codex Command** não criou o nó.

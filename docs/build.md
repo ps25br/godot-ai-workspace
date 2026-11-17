@@ -237,6 +237,12 @@ Para a etapa 03, a primeira execução ([run 43963341537](https://github.com/ps2
 O commit `db712c98765` passou no workflow [44005636288](https://github.com/ps25br/godot-ai-workspace/actions/runs/44005636288), com artifact baixado em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\run-44005636288\godot.windows.editor.x86_64.exe`. A versão reportada foi `4.7.2.stable.gh.db712c987`. O executável foi exercitado com projeto temporário, incluindo teste gráfico da aba, persistência da associação no Inspector e três execuções headless consecutivas com código 0 e stderr vazio após a sessão gráfica. Uma execução headless inicial reproduziu a falha conhecida de estado persistido (`EditorNode::is_cmdline_mode`); ela não foi ocultada e as execuções subsequentes passaram.
 ## Agent Bridge local
 
+### Validação da etapa 10
+
+O commit `4d2fde81c47` passou na execução [44085486259](https://github.com/ps25br/godot-ai-workspace/actions/runs/44085486259). O artifact está em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\stage10-run-44085486259\godot.windows.editor.x86_64.exe`; `--version` retornou `4.7.2.stable.gh.4d2fde81c` com código 0 e o teste `--headless --editor --path <projeto-temporário> --quit` retornou código 0.
+
+O probe real do Codex autenticado confirmou `initialize`, `thread/start` e `thread/resume`; o turno não entregou delta e conclusão dentro do timeout e a tentativa gráfica encerrou sem janela capturável. Assim, o build está aprovado, mas os testes de conversa contínua, cancelamento e screenshots permanecem limitações desta execução, não resultados simulados.
+
 ## Etapa 10 - chat nativo do Codex
 
 O chat usa o mesmo executável editor compilado remotamente e inicia `codex app-server --listen stdio://` somente quando **Connect Codex** é pressionado. O workflow não instala o Codex nem executa inferência durante a compilação; a máquina que abrir o artifact precisa ter o CLI instalado e autenticado.

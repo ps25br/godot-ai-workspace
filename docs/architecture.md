@@ -78,6 +78,12 @@ O adaptador reutiliza o `AIWorkspaceContextService` para anexar um snapshot some
 
 ## Agent Bridge local
 
+### Validação da etapa 10
+
+O commit de código `4d2fde81c47` passou no workflow Windows [44085486259](https://github.com/ps25br/godot-ai-workspace/actions/runs/44085486259). O artifact foi baixado em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\stage10-run-44085486259\godot.windows.editor.x86_64.exe`; `--version` retornou `4.7.2.stable.gh.4d2fde81c` com código 0 e `--headless --editor --path <projeto-temporário> --quit` retornou código 0 sem stderr relevante.
+
+A sondagem real do CLI autenticado confirmou respostas para `initialize`, `thread/start` e `thread/resume`, mas não recebeu o par completo de delta/conclusão dentro da janela de teste. A tentativa de GUI inicializou OpenGL e encerrou sem manter uma janela capturável neste ambiente; portanto não há screenshot nem aprovação visual desta etapa. Não houve compilação C++ local.
+
 ## Chat nativo e sessões do Codex
 
 A etapa 10 evolui `AIWorkspaceCodexAdapter` para manter uma conversa contínua sem alterar o runtime. Cada turno adiciona uma mensagem `user` e uma mensagem `assistant`; os eventos oficiais `item/agentMessage/delta` atualizam a segunda progressivamente e `turn/completed` fecha seu estado como `completed`, `interrupted` ou `failed`. A tela renderiza esse vetor em controles nativos dentro de um `ScrollContainer` e preserva a posição do usuário quando ele está lendo mensagens anteriores.
