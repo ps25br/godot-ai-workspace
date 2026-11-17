@@ -48,13 +48,24 @@ void AIWorkspaceCodexAdapter::_resolve_codex_command() {
 		return;
 	}
 
-	const Vector<String> path_entries = OS::get_singleton()->get_environment("PATH").split(";", false);
+	Vector<String> path_entries = OS::get_singleton()->get_environment("PATH").split(";", false);
+	const String npm_directory = OS::get_singleton()->get_environment("APPDATA").path_join("npm");
+	if (!npm_directory.is_empty()) {
+		path_entries.push_back(npm_directory);
+	}
 	String node_executable;
 	for (const String &entry : path_entries) {
 		const String directory = entry.strip_edges();
 		if (!directory.is_empty() && FileAccess::exists(directory.path_join("node.exe"))) {
 			node_executable = directory.path_join("node.exe");
 			break;
+		}
+	}
+	if (node_executable.is_empty()) {
+		const String program_files = OS::get_singleton()->get_environment("ProgramFiles");
+		const String standard_node = program_files.path_join("nodejs").path_join("node.exe");
+		if (FileAccess::exists(standard_node)) {
+			node_executable = standard_node;
 		}
 	}
 	for (const String &entry : path_entries) {
