@@ -32,6 +32,7 @@
 #include "scene/gui/margin_container.h"
 
 class Button;
+class AIWorkspaceCommandRouter;
 class AIWorkspaceContextService;
 class Label;
 class PanelContainer;
@@ -53,15 +54,22 @@ class AIWorkspaceMainScreen : public MarginContainer {
 	PanelContainer *context_panel = nullptr;
 	Button *context_inspection_toggle = nullptr;
 	TextEdit *context_json_view = nullptr;
+	Button *command_test_toggle = nullptr;
+	PanelContainer *command_test_panel = nullptr;
+	TextEdit *command_json_input = nullptr;
+	TextEdit *command_result_view = nullptr;
 	Label *project_value = nullptr;
 	Label *scene_value = nullptr;
 	Label *selection_value = nullptr;
 	Label *resources_value = nullptr;
 	AIWorkspaceContextService *context_service = nullptr;
+	AIWorkspaceCommandRouter *command_router = nullptr;
 
 	void _toggle_context_panel();
 	void _update_context_toggle_button();
 	void _toggle_context_inspection();
+	void _toggle_command_test_panel();
+	void _execute_test_command();
 	void _refresh_context();
 
 protected:

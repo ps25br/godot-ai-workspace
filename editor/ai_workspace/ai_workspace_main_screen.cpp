@@ -29,8 +29,10 @@
 
 #include "ai_workspace_main_screen.h"
 
-#include "ai_workspace_context_service.h"
+#include "editor/ai_workspace/ai_workspace_command_router.h"
+#include "editor/ai_workspace/ai_workspace_context_service.h"
 
+#include "core/io/json.h"
 #include "core/object/callable_mp.h"
 #include "editor/editor_node.h"
 #include "editor/themes/editor_scale.h"
@@ -93,6 +95,21 @@ void AIWorkspaceMainScreen::_toggle_context_inspection() {
 	}
 }
 
+void AIWorkspaceMainScreen::_toggle_command_test_panel() {
+	const bool panel_visible = !command_test_panel->is_visible();
+	command_test_panel->set_visible(panel_visible);
+	command_test_toggle->set_text(panel_visible ? TTRC("Hide Command Router Test") : TTRC("Show Command Router Test"));
+}
+
+void AIWorkspaceMainScreen::_execute_test_command() {
+	if (!command_router) {
+		return;
+	}
+	const Dictionary response = command_router->execute_json(command_json_input->get_text());
+	command_result_view->set_text(JSON::stringify(response, "\t"));
+	_refresh_context();
+}
+
 void AIWorkspaceMainScreen::_refresh_context() {
 	if (!context_service) {
 		return;
@@ -139,6 +156,7 @@ void AIWorkspaceMainScreen::_notification(int p_what) {
 
 AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	context_service = memnew(AIWorkspaceContextService);
+	command_router = memnew(AIWorkspaceCommandRouter);
 	if (EditorNode::get_singleton() && EditorNode::get_singleton()->get_editor_selection()) {
 		EditorNode::get_singleton()->get_editor_selection()->connect("selection_changed", callable_mp(this, &AIWorkspaceMainScreen::_refresh_context));
 	}
@@ -284,6 +302,53 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	send_button->set_v_size_flags(Control::SIZE_SHRINK_END);
 	composer->add_child(send_button);
 
+	command_test_toggle = memnew(Button);
+	command_test_toggle->set_name("CommandRouterTestToggle");
+	command_test_toggle->set_text(TTRC("Show Command Router Test"));
+	command_test_toggle->set_tooltip_text(TTRC("Open the temporary development tool for structured scene commands."));
+	command_test_toggle->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_toggle_command_test_panel));
+	conversation->add_child(command_test_toggle);
+
+	command_test_panel = memnew(PanelContainer);
+	command_test_panel->set_name("CommandRouterTestPanel");
+	command_test_panel->hide();
+	conversation->add_child(command_test_panel);
+
+	MarginContainer *command_test_margin = memnew(MarginContainer);
+	set_margin(command_test_margin, 8 * EDSCALE);
+	command_test_panel->add_child(command_test_margin);
+
+	VBoxContainer *command_test = memnew(VBoxContainer);
+	command_test->add_theme_constant_override(SNAME("separation"), 6 * EDSCALE);
+	command_test_margin->add_child(command_test);
+
+	Label *command_test_title = memnew(Label);
+	command_test_title->set_text(TTRC("Command Router Test (Development Tool)"));
+	command_test_title->set_theme_type_variation("HeaderSmall");
+	command_test->add_child(command_test_title);
+
+	command_json_input = memnew(TextEdit);
+	command_json_input->set_name("CommandJsonInput");
+	command_json_input->set_custom_minimum_size(Size2(0, 130) * EDSCALE);
+	command_json_input->set_line_wrapping_mode(TextEdit::LINE_WRAPPING_BOUNDARY);
+	command_json_input->set_text("{\n\t\"command\": \"node.create\",\n\t\"args\": {\n\t\t\"parent_path\": \".\",\n\t\t\"type\": \"Node2D\",\n\t\t\"name\": \"Enemy\"\n\t}\n}");
+	command_test->add_child(command_json_input);
+
+	Button *execute_command_button = memnew(Button);
+	execute_command_button->set_name("ExecuteCommandButton");
+	execute_command_button->set_text(TTRC("Validate and Execute"));
+	execute_command_button->set_tooltip_text(TTRC("Validate and execute this command through the native editor Undo/Redo history."));
+	execute_command_button->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_execute_test_command));
+	command_test->add_child(execute_command_button);
+
+	command_result_view = memnew(TextEdit);
+	command_result_view->set_name("CommandResultView");
+	command_result_view->set_custom_minimum_size(Size2(0, 110) * EDSCALE);
+	command_result_view->set_line_wrapping_mode(TextEdit::LINE_WRAPPING_BOUNDARY);
+	command_result_view->set_editable(false);
+	command_result_view->set_placeholder(TTRC("Structured command result"));
+	command_test->add_child(command_result_view);
+
 	context_panel = memnew(PanelContainer);
 	context_panel->set_name("ContextPanel");
 	context_panel->set_custom_minimum_size(Size2(260, 0) * EDSCALE);
@@ -346,5 +411,6 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 }
 
 AIWorkspaceMainScreen::~AIWorkspaceMainScreen() {
+	memdelete(command_router);
 	memdelete(context_service);
 }

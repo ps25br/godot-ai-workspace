@@ -23,3 +23,9 @@ Os controles de entrada e as regiões de mensagens e contexto são mantidos como
 A etapa 05 adiciona `AIWorkspaceContextService`, um serviço somente leitura em `editor/ai_workspace/`. Ele consulta o nome do projeto, a cena editada, a seleção atual e um conjunto limitado de propriedades editoriais e recursos diretamente associados aos nós selecionados. Nós removidos são revalidados por `ObjectDB` antes da coleta.
 
 As atualizações usam os sinais nativos `EditorNode::scene_changed`, `EditorNode::scene_closed` e `EditorSelection::selection_changed`; não há polling contínuo. `AIWorkspaceMainScreen` solicita um snapshot ao serviço e atualiza o painel contextual, mantendo as operações do agente vazias. O snapshot é composto por `Dictionary`/`Array` sem ponteiros e pode ser inspecionado como JSON somente leitura na própria interface.
+
+## Command Router nativo
+
+A etapa 06 adiciona `AIWorkspaceCommandRouter` como a única entrada para alterações estruturadas na cena. O router aceita um objeto JSON com `command` e `args`, resolve somente caminhos relativos à raiz editada e retorna respostas formadas por `Dictionary`, sem expor ponteiros. A primeira versão possui apenas `node.create`, `node.set_property` e `node.delete`, com listas explícitas de tipos de nós e propriedades permitidos.
+
+Todas as alterações são registradas no histórico da cena pelo `EditorUndoRedoManager`. Criação e remoção preservam parent, índice e owner; alterações de propriedade guardam o valor anterior. O `SceneTreeEditor`, a seleção e o Inspector são atualizados pelos mecanismos nativos do editor. Uma área técnica recolhível em `AIWorkspaceMainScreen` permite testes manuais com JSON, sem habilitar o compositor principal nem introduzir comunicação externa.
