@@ -149,6 +149,16 @@ Não foram observados erros de conexão de sinais, referências inválidas ou me
 
 A execução final desta validação ([run 43993475255](https://github.com/ps25br/godot-ai-workspace/actions/runs/43993475255)) compilou o HEAD `00098739cf8` e confirmou `4.7.2.stable.gh.00098739c`. O projeto temporário original, após a sessão gráfica, reteve estado em `.godot/editor` e reproduziu uma falha de encerramento ao reabrir o layout em headless. Um projeto temporário limpo, sem `.godot`, passou o mesmo comando `--headless --editor --path <projeto> --quit` com código 0 e stderr vazio.
 
+## Etapa 05.2 - falha intermitente com estado persistido
+
+O cenário foi repetido com o artifact do commit `390e6b2400e` e com o executável oficial `Godot_v4.7.2-stable_win64.exe`, versão `4.7.2.stable.official.ed1daf0bf`. Ambos apresentaram, de forma intermitente, o mesmo código de exceção do Windows `0xC0000005` ao executar `--headless --editor --path <projeto> --quit` durante uma transição de cache/estado do editor. Repetições posteriores com o mesmo binário e o estado já regravado encerraram com código 0.
+
+A existência de `.godot/editor` isoladamente não é suficiente para causar a falha: duas inicializações controladas e cinco repetições do fork passaram com stderr vazio. Copiar apenas o `editor_layout.cfg`, inclusive com a tela AI Workspace selecionada e sem cenas abertas, também não reproduziu o problema. Alternar somente o caminho de duas cópias idênticas do executável oficial passou quatro vezes. A falha depende de uma condição de corrida durante a inicialização e o encerramento imediato do editor, não de um valor isolado do layout.
+
+O Event Viewer confirmou a violação de acesso dentro do próprio executável oficial, no offset `0x194aeb7`, além das ocorrências no fork. A mensagem `EditorNode::is_cmdline_mode` indica que algum trabalho pendente chegou a consultar o singleton depois de ele ter sido zerado no destrutor de `EditorNode`. Os chamadores existentes nessa versão são a carga do cache de documentação e `EditorFileSystem::_process_update_pending()`. Sem PDB, dump ou depurador Windows disponível, não foi possível obter uma pilha simbólica que identifique qual callback causou a violação; a mensagem pode ser secundária ao crash.
+
+Como a Godot oficial reproduz a falha e os testes não relacionaram o problema ao ciclo de vida de `AIWorkspaceEditorPlugin`, `AIWorkspaceMainScreen` ou `AIWorkspaceContextService`, nenhum código do fork foi alterado para mascará-la. Os logs controlados foram preservados fora do repositório em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\stage-05-2-logs`.
+
 O repositório público está disponível em [github.com/ps25br/godot-ai-workspace](https://github.com/ps25br/godot-ai-workspace), com `ai-workspace` como branch padrão.
 
 - Workflow: [AI Workspace - Windows Build](https://github.com/ps25br/godot-ai-workspace/actions/workflows/ai-workspace-windows.yml)
