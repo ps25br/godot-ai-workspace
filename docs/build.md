@@ -147,6 +147,8 @@ Validação visual realizada em `visual-ai-workspace-active.png`, `visual-contex
 
 Não foram observados erros de conexão de sinais, referências inválidas ou mensagens de ciclo de vida no teste aprovado. Não houve alteração de código nesta subetapa e não houve compilação C++ local.
 
+A execução final desta validação ([run 43993475255](https://github.com/ps25br/godot-ai-workspace/actions/runs/43993475255)) compilou o HEAD `00098739cf8` e confirmou `4.7.2.stable.gh.00098739c`. O projeto temporário original, após a sessão gráfica, reteve estado em `.godot/editor` e reproduziu uma falha de encerramento ao reabrir o layout em headless. Um projeto temporário limpo, sem `.godot`, passou o mesmo comando `--headless --editor --path <projeto> --quit` com código 0 e stderr vazio.
+
 O repositório público está disponível em [github.com/ps25br/godot-ai-workspace](https://github.com/ps25br/godot-ai-workspace), com `ai-workspace` como branch padrão.
 
 - Workflow: [AI Workspace - Windows Build](https://github.com/ps25br/godot-ai-workspace/actions/workflows/ai-workspace-windows.yml)
