@@ -227,3 +227,13 @@ Para a etapa 03, a primeira execução ([run 43963341537](https://github.com/ps2
 ### Validação executada
 
 O commit `db712c98765` passou no workflow [44005636288](https://github.com/ps25br/godot-ai-workspace/actions/runs/44005636288), com artifact baixado em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\run-44005636288\godot.windows.editor.x86_64.exe`. A versão reportada foi `4.7.2.stable.gh.db712c987`. O executável foi exercitado com projeto temporário, incluindo teste gráfico da aba, persistência da associação no Inspector e três execuções headless consecutivas com código 0 e stderr vazio após a sessão gráfica. Uma execução headless inicial reproduziu a falha conhecida de estado persistido (`EditorNode::is_cmdline_mode`); ela não foi ocultada e as execuções subsequentes passaram.
+## Agent Bridge local
+
+O Bridge é desativado por padrão. No editor compilado, abra **AI Workspace** e pressione **Enable Local Bridge**. A interface mostra o endereço loopback, o segredo da sessão e os botões de aprovação. Para testes automatizados, use a ativação explícita por linha de comando:
+
+```powershell
+& ".\godot.windows.editor.x86_64.exe" --editor --path "C:\projeto-de-teste" --ai-workspace-bridge --ai-workspace-bridge-secret="segredo-de-teste"
+python tools/ai_workspace_bridge_client.py --secret segredo-de-teste self-test
+```
+
+O segredo de teste deve ser temporário. A conexão não autoriza comandos mutáveis: cada `command.execute` aguarda **Approve Command**. O cliente de teste e o contrato completo estão em `tools/ai_workspace_bridge_client.py` e `docs/agent-bridge-protocol.md`.

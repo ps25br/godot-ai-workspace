@@ -70,3 +70,8 @@ Criação de arquivos não sobrescreve destinos existentes e não implementa exc
 ### Validação da etapa 07
 
 O commit `db712c98765` foi compilado remotamente e validado com um projeto temporário. Foram testadas criação de cenas `Node2D`/`Node3D`, criação de `Gradient`/`GradientTexture2D`, associação de textura em `Sprite2D`, proteção contra alterações não salvas, abertura e salvamento de cenas, rejeição de sobrescrita e caminhos inválidos, incompatibilidade de recursos, Undo/Redo e persistência após reabertura do editor.
+## Agent Bridge local
+
+A etapa 08 adiciona `AIWorkspaceAgentBridge` em `editor/ai_workspace/`. Ele usa as APIs nativas `TCPServer` e `StreamPeerTCP`, faz bind somente em `127.0.0.1:47831` e processa JSON delimitado por linha na thread principal do editor. O Bridge começa desativado, gera um segredo de sessão por ativação e reutiliza `AIWorkspaceContextService` e `AIWorkspaceCommandRouter` sem duplicar suas regras.
+
+`bridge.ping` e `context.get` são somente leitura. `command.execute` cria uma solicitação pendente e só é encaminhado ao Router após aprovação explícita na interface. O transporte não executa shell, não cria novos comandos e não altera o runtime.

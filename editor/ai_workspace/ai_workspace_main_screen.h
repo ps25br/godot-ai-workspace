@@ -34,7 +34,9 @@
 class Button;
 class AIWorkspaceCommandRouter;
 class AIWorkspaceContextService;
+class AIWorkspaceAgentBridge;
 class Label;
+class LineEdit;
 class PanelContainer;
 class TextEdit;
 class TextureRect;
@@ -64,12 +66,23 @@ class AIWorkspaceMainScreen : public MarginContainer {
 	Label *resources_value = nullptr;
 	AIWorkspaceContextService *context_service = nullptr;
 	AIWorkspaceCommandRouter *command_router = nullptr;
+	AIWorkspaceAgentBridge *agent_bridge = nullptr;
+	Button *bridge_toggle = nullptr;
+	Button *bridge_approve = nullptr;
+	Button *bridge_reject = nullptr;
+	Label *bridge_status = nullptr;
+	Label *bridge_pending = nullptr;
+	LineEdit *bridge_secret = nullptr;
 
 	void _toggle_context_panel();
 	void _update_context_toggle_button();
 	void _toggle_context_inspection();
 	void _toggle_command_test_panel();
 	void _execute_test_command();
+	void _toggle_agent_bridge();
+	void _approve_agent_request();
+	void _reject_agent_request();
+	void _refresh_agent_bridge();
 	void _refresh_context();
 
 protected:

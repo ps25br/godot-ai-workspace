@@ -31,15 +31,18 @@
 
 #include "editor/ai_workspace/ai_workspace_command_router.h"
 #include "editor/ai_workspace/ai_workspace_context_service.h"
+#include "editor/ai_workspace/ai_workspace_agent_bridge.h"
 
 #include "core/io/json.h"
 #include "core/object/callable_mp.h"
+#include "core/os/os.h"
 #include "editor/editor_node.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/button.h"
 #include "scene/gui/center_container.h"
 #include "scene/gui/label.h"
+#include "scene/gui/line_edit.h"
 #include "scene/gui/panel_container.h"
 #include "scene/gui/scroll_container.h"
 #include "scene/gui/separator.h"
@@ -110,6 +113,47 @@ void AIWorkspaceMainScreen::_execute_test_command() {
 	_refresh_context();
 }
 
+void AIWorkspaceMainScreen::_toggle_agent_bridge() {
+	if (agent_bridge->is_enabled()) {
+		agent_bridge->stop();
+	} else {
+		agent_bridge->start();
+	}
+	_refresh_agent_bridge();
+}
+
+void AIWorkspaceMainScreen::_approve_agent_request() {
+	agent_bridge->approve_pending_request();
+	_refresh_agent_bridge();
+	_refresh_context();
+}
+
+void AIWorkspaceMainScreen::_reject_agent_request() {
+	agent_bridge->reject_pending_request();
+	_refresh_agent_bridge();
+}
+
+void AIWorkspaceMainScreen::_refresh_agent_bridge() {
+	if (!agent_bridge) {
+		return;
+	}
+	if (!agent_bridge->is_enabled()) {
+		bridge_status->set_text(agent_bridge->get_last_error().is_empty() ? TTRC("Disabled") : agent_bridge->get_last_error());
+		bridge_toggle->set_text(TTRC("Enable Local Bridge"));
+		bridge_secret->clear();
+	} else if (!agent_bridge->get_last_error().is_empty()) {
+		bridge_status->set_text(agent_bridge->get_last_error());
+	} else {
+		bridge_status->set_text(agent_bridge->has_connection() ? vformat(TTRC("Connected on 127.0.0.1:%d"), agent_bridge->get_port()) : vformat(TTRC("Listening on 127.0.0.1:%d"), agent_bridge->get_port()));
+		bridge_toggle->set_text(TTRC("Disable Local Bridge"));
+		bridge_secret->set_text(agent_bridge->get_session_secret());
+	}
+	const bool pending = agent_bridge->has_pending_request();
+	bridge_pending->set_text(pending ? vformat(TTRC("Pending command: %s"), agent_bridge->get_pending_summary()) : TTRC("No pending command"));
+	bridge_approve->set_disabled(!pending);
+	bridge_reject->set_disabled(!pending);
+}
+
 void AIWorkspaceMainScreen::_refresh_context() {
 	if (!context_service) {
 		return;
@@ -147,16 +191,24 @@ void AIWorkspaceMainScreen::refresh_context() {
 }
 
 void AIWorkspaceMainScreen::_notification(int p_what) {
-	if (p_what == NOTIFICATION_THEME_CHANGED) {
-		empty_state_icon->set_texture(get_editor_theme_icon(SNAME("History")));
-		settings_button->set_button_icon(get_editor_theme_icon(SNAME("Tools")));
-		_update_context_toggle_button();
+	switch (p_what) {
+		case NOTIFICATION_PROCESS: {
+			agent_bridge->poll();
+			_refresh_agent_bridge();
+		} break;
+		case NOTIFICATION_THEME_CHANGED: {
+			empty_state_icon->set_texture(get_editor_theme_icon(SNAME("History")));
+			settings_button->set_button_icon(get_editor_theme_icon(SNAME("Tools")));
+			_update_context_toggle_button();
+		} break;
 	}
 }
 
 AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	context_service = memnew(AIWorkspaceContextService);
 	command_router = memnew(AIWorkspaceCommandRouter);
+	agent_bridge = memnew(AIWorkspaceAgentBridge(context_service, command_router));
+	set_process(true);
 	if (EditorNode::get_singleton() && EditorNode::get_singleton()->get_editor_selection()) {
 		EditorNode::get_singleton()->get_editor_selection()->connect("selection_changed", callable_mp(this, &AIWorkspaceMainScreen::_refresh_context));
 	}
@@ -314,6 +366,51 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	command_test_panel->hide();
 	conversation->add_child(command_test_panel);
 
+	PanelContainer *bridge_panel = memnew(PanelContainer);
+	bridge_panel->set_name("AgentBridgePanel");
+	conversation->add_child(bridge_panel);
+	MarginContainer *bridge_margin = memnew(MarginContainer);
+	set_margin(bridge_margin, 8 * EDSCALE);
+	bridge_panel->add_child(bridge_margin);
+	VBoxContainer *bridge_box = memnew(VBoxContainer);
+	bridge_box->add_theme_constant_override(SNAME("separation"), 6 * EDSCALE);
+	bridge_margin->add_child(bridge_box);
+	Label *bridge_title = memnew(Label);
+	bridge_title->set_text(TTRC("Local Agent Bridge (Development)"));
+	bridge_title->set_theme_type_variation("HeaderSmall");
+	bridge_box->add_child(bridge_title);
+	Label *bridge_description = memnew(Label);
+	bridge_description->set_text(TTRC("Loopback JSON transport. Connections never authorize edits automatically."));
+	bridge_description->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+	bridge_box->add_child(bridge_description);
+	HBoxContainer *bridge_controls = memnew(HBoxContainer);
+	bridge_box->add_child(bridge_controls);
+	bridge_toggle = memnew(Button);
+	bridge_toggle->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_toggle_agent_bridge));
+	bridge_controls->add_child(bridge_toggle);
+	bridge_status = memnew(Label);
+	bridge_status->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	bridge_controls->add_child(bridge_status);
+	bridge_secret = memnew(LineEdit);
+	bridge_secret->set_name("AgentBridgeSessionSecret");
+	bridge_secret->set_editable(false);
+	bridge_secret->set_placeholder(TTRC("Session secret appears when enabled"));
+	bridge_secret->set_custom_minimum_size(Size2(260, 0) * EDSCALE);
+	bridge_box->add_child(bridge_secret);
+	bridge_pending = memnew(Label);
+	bridge_pending->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+	bridge_box->add_child(bridge_pending);
+	HBoxContainer *approval_controls = memnew(HBoxContainer);
+	bridge_box->add_child(approval_controls);
+	bridge_approve = memnew(Button);
+	bridge_approve->set_text(TTRC("Approve Command"));
+	bridge_approve->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_approve_agent_request));
+	approval_controls->add_child(bridge_approve);
+	bridge_reject = memnew(Button);
+	bridge_reject->set_text(TTRC("Reject Command"));
+	bridge_reject->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_reject_agent_request));
+	approval_controls->add_child(bridge_reject);
+
 	MarginContainer *command_test_margin = memnew(MarginContainer);
 	set_margin(command_test_margin, 8 * EDSCALE);
 	command_test_panel->add_child(command_test_margin);
@@ -408,9 +505,26 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 
 	_update_context_toggle_button();
 	_refresh_context();
+	_refresh_agent_bridge();
+
+	String command_line_secret;
+	bool command_line_bridge = false;
+	for (const String &argument : OS::get_singleton()->get_cmdline_args()) {
+		if (argument == "--ai-workspace-bridge") {
+			command_line_bridge = true;
+		} else if (argument.begins_with("--ai-workspace-bridge-secret=")) {
+			command_line_secret = argument.trim_prefix("--ai-workspace-bridge-secret=");
+		}
+	}
+	if (command_line_bridge) {
+		agent_bridge->start(command_line_secret);
+		_refresh_agent_bridge();
+	}
 }
 
 AIWorkspaceMainScreen::~AIWorkspaceMainScreen() {
+	set_process(false);
+	memdelete(agent_bridge);
 	memdelete(command_router);
 	memdelete(context_service);
 }
