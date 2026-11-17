@@ -54,6 +54,8 @@ class AIWorkspaceMainScreen : public MarginContainer {
 	VBoxContainer *message_history = nullptr;
 	TextEdit *instruction_input = nullptr;
 	TextEdit *codex_response_view = nullptr;
+	Button *codex_approve_button = nullptr;
+	Button *codex_reject_button = nullptr;
 	Button *send_button = nullptr;
 	Button *settings_button = nullptr;
 	Button *context_toggle_button = nullptr;

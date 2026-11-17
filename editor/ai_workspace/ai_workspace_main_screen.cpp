@@ -188,10 +188,14 @@ void AIWorkspaceMainScreen::_refresh_codex() {
 		bridge_pending->set_text(vformat(TTRC("Codex proposed command: %s"), codex_adapter->get_pending_command_summary()));
 		bridge_approve->set_disabled(false);
 		bridge_reject->set_disabled(false);
+		codex_approve_button->set_disabled(false);
+		codex_reject_button->set_disabled(false);
 	} else if (!agent_bridge->has_pending_request()) {
 		bridge_pending->set_text(TTRC("No pending command"));
 		bridge_approve->set_disabled(true);
 		bridge_reject->set_disabled(true);
+		codex_approve_button->set_disabled(true);
+		codex_reject_button->set_disabled(true);
 	}
 }
 
@@ -434,6 +438,20 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	codex_response_view->set_editable(false);
 	codex_response_view->set_placeholder(TTRC("Codex response"));
 	conversation->add_child(codex_response_view);
+
+	HBoxContainer *codex_approval_controls = memnew(HBoxContainer);
+	codex_approval_controls->add_theme_constant_override(SNAME("separation"), 8 * EDSCALE);
+	conversation->add_child(codex_approval_controls);
+	codex_approve_button = memnew(Button);
+	codex_approve_button->set_text(TTRC("Approve Codex Command"));
+	codex_approve_button->set_disabled(true);
+	codex_approve_button->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_approve_codex_request));
+	codex_approval_controls->add_child(codex_approve_button);
+	codex_reject_button = memnew(Button);
+	codex_reject_button->set_text(TTRC("Reject Codex Command"));
+	codex_reject_button->set_disabled(true);
+	codex_reject_button->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_reject_codex_request));
+	codex_approval_controls->add_child(codex_reject_button);
 
 	command_test_toggle = memnew(Button);
 	command_test_toggle->set_name("CommandRouterTestToggle");
