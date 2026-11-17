@@ -1,3 +1,33 @@
+/**************************************************************************/
+/*  build.md                                                              */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
+
 # Build e manutenção do fork
 
 ## Estado inicial
@@ -194,3 +224,6 @@ Para a etapa 03, a primeira execução ([run 43963341537](https://github.com/ps2
 - `--version`: código de saída 0.
 - Inicialização headless sem projeto externo: código de saída 0.
 - Executável baixado em: `C:\Users\win10\Documents\Godot AI Workspace-artifacts\run-43963807986\godot.windows.editor.x86_64.exe`.
+### Validação executada
+
+O commit `db712c98765` passou no workflow [44005636288](https://github.com/ps25br/godot-ai-workspace/actions/runs/44005636288), com artifact baixado em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\run-44005636288\godot.windows.editor.x86_64.exe`. A versão reportada foi `4.7.2.stable.gh.db712c987`. O executável foi exercitado com projeto temporário, incluindo teste gráfico da aba, persistência da associação no Inspector e três execuções headless consecutivas com código 0 e stderr vazio após a sessão gráfica. Uma execução headless inicial reproduziu a falha conhecida de estado persistido (`EditorNode::is_cmdline_mode`); ela não foi ocultada e as execuções subsequentes passaram.

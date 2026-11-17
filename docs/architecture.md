@@ -1,3 +1,33 @@
+/**************************************************************************/
+/*  architecture.md                                                       */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
+
 # Arquitetura inicial
 
 Este projeto parte de um fork da Godot 4.7.2 voltado a um fluxo de desenvolvimento AI-first. O runtime, o editor 2D/3D, o Inspector, a animação e as ferramentas nativas permanecem como a base principal e devem receber o mínimo possível de alterações.
@@ -37,3 +67,6 @@ A etapa 07 amplia o mesmo `AIWorkspaceCommandRouter` com `scene.create`, `scene.
 Os tipos de raiz permitidos são `Node2D` e `Node3D`. Recursos criáveis são limitados a `Gradient` e `GradientTexture2D`, gravados como `.tres`. A associação inicial é somente `Sprite2D.texture` com um recurso compatível `Texture2D`. Caminhos precisam ser normalizados, começar por `res://`, usar extensões permitidas, não conter `..`, protocolos adicionais, separadores alternativos ou componentes simbólicos.
 
 Criação de arquivos não sobrescreve destinos existentes e não implementa exclusão. `resource.assign` usa `EditorUndoRedoManager` para restaurar o recurso anterior; abertura é navegação e bloqueia histórico não salvo; salvamento em disco não promete Undo/Redo. Nenhum recurso externo é alterado durante uma associação.
+### Validação da etapa 07
+
+O commit `db712c98765` foi compilado remotamente e validado com um projeto temporário. Foram testadas criação de cenas `Node2D`/`Node3D`, criação de `Gradient`/`GradientTexture2D`, associação de textura em `Sprite2D`, proteção contra alterações não salvas, abertura e salvamento de cenas, rejeição de sobrescrita e caminhos inválidos, incompatibilidade de recursos, Undo/Redo e persistência após reabertura do editor.
