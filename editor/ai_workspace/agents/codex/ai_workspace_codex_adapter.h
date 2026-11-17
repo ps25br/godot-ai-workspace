@@ -36,16 +36,35 @@ private:
 	String thread_id;
 	String pending_command_json;
 	String pending_command_summary;
+	String active_turn_id;
+	String persisted_thread_id;
+	Array chat_history;
 	uint64_t next_request_id = 1;
 	uint64_t initialize_request_id = 0;
 	uint64_t thread_request_id = 0;
+	uint64_t turn_request_id = 0;
+	uint64_t interrupt_request_id = 0;
+	int current_assistant_index = -1;
+	int current_proposal_index = -1;
+	enum SessionRequest {
+		SESSION_REQUEST_NONE,
+		SESSION_REQUEST_START,
+		SESSION_REQUEST_RESUME,
+	};
+	SessionRequest session_request = SESSION_REQUEST_NONE;
 	bool turn_active = false;
+	bool interrupt_requested = false;
 
 	bool _send(const Dictionary &p_message);
 	void _handle_message(const Dictionary &p_message);
 	void _handle_line(const String &p_line);
 	void _set_error(const String &p_error, State p_state = STATE_ERROR);
 	void _clear_process();
+	void _send_session_request(bool p_resume);
+	void _load_persistent_state();
+	void _save_persistent_state();
+	void _finish_turn(const String &p_status);
+	void _add_command_proposal();
 	bool _is_authentication_error(const String &p_error) const;
 
 public:
@@ -57,11 +76,18 @@ public:
 	void disconnect();
 	void poll();
 	Error send_instruction(const String &p_instruction);
+	Error stop_generation();
+	Error new_session();
+	Error resume_session(const String &p_thread_id);
 
 	State get_state() const { return state; }
 	String get_state_text() const;
 	String get_last_error() const { return last_error; }
 	String get_response_text() const { return response_text; }
+	Array get_chat_history() const { return chat_history; }
+	bool is_generating() const { return turn_active; }
+	String get_thread_id() const { return thread_id; }
+	String get_active_turn_id() const { return active_turn_id; }
 	bool has_pending_command() const { return !pending_command_json.is_empty(); }
 	String get_pending_command_summary() const { return pending_command_summary; }
 	Dictionary approve_pending_command(AIWorkspaceCommandRouter *p_command_router);

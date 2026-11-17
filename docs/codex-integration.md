@@ -30,7 +30,13 @@ O app-server oficial pode expor ferramentas de uma aplicação hospedeira, mas e
 
 ## Limitações
 
-Não há histórico persistente, múltiplas conversas, retomada de threads, streaming avançado, renovação OAuth, login no navegador, ferramentas oficiais expostas ao Codex ou suporte a OpenCode/Claude/MCP. A ponte de propostas é limitada e não substitui uma ferramenta oficial do app-server.
+## Chat, histórico e retomada
+
+O ciclo do adaptador também usa `thread/resume` e `turn/interrupt`. O texto é exibido progressivamente a partir de `item/agentMessage/delta`; `Stop` preserva o texto recebido e marca a mensagem como interrompida. **New Chat** inicia uma thread nova. O adaptador salva somente `thread_id` e um histórico local limitado a 64 mensagens e 32768 caracteres por mensagem, usando metadados do projeto via `EditorSettings`; tokens e credenciais nunca são persistidos.
+
+Uma thread persistida é retomada ao conectar. Se a thread não existir mais, o adaptador cria uma nova. A listagem de threads remotas não é exposta nesta etapa, pois o fluxo não busca o histórico remoto completo para preencher a interface sem misturar conversas.
+
+Não há listagem/troca de múltiplas threads remotas, renovação OAuth, login no navegador, ferramentas oficiais expostas ao Codex ou suporte a OpenCode/Claude/MCP. A ponte de propostas é limitada e não substitui uma ferramenta oficial do app-server.
 
 ## Validação
 

@@ -162,6 +162,20 @@ void AIWorkspaceMainScreen::_send_codex_instruction() {
 	_refresh_codex();
 }
 
+void AIWorkspaceMainScreen::_stop_codex_generation() {
+	if (codex_adapter->stop_generation() != OK) {
+		_refresh_codex();
+		return;
+	}
+	_refresh_codex();
+}
+
+void AIWorkspaceMainScreen::_new_codex_session() {
+	if (codex_adapter->new_session() == OK) {
+		_refresh_codex();
+	}
+}
+
 void AIWorkspaceMainScreen::_approve_codex_request() {
 	const Dictionary result = codex_adapter->approve_pending_command(command_router);
 	command_result_view->set_text(JSON::stringify(result, "\t"));
@@ -180,7 +194,12 @@ void AIWorkspaceMainScreen::_refresh_codex() {
 	}
 	connection_value->set_text(codex_adapter->get_state_text());
 	codex_connect_button->set_text(codex_adapter->get_state() == AIWorkspaceCodexAdapter::STATE_CONNECTED ? TTRC("Disconnect Codex") : TTRC("Connect Codex"));
-	send_button->set_disabled(codex_adapter->get_state() != AIWorkspaceCodexAdapter::STATE_CONNECTED);
+	const bool connected = codex_adapter->get_state() == AIWorkspaceCodexAdapter::STATE_CONNECTED;
+	const bool generating = codex_adapter->is_generating();
+	send_button->set_disabled(!connected || generating);
+	stop_button->set_disabled(!generating);
+	new_session_button->set_disabled(!connected || generating);
+	generation_status->set_text(generating ? TTRC("Generating…") : String());
 	if (!codex_adapter->get_response_text().is_empty()) {
 		codex_response_view->set_text(codex_adapter->get_response_text());
 	}
@@ -196,6 +215,40 @@ void AIWorkspaceMainScreen::_refresh_codex() {
 		bridge_reject->set_disabled(true);
 		codex_approve_button->set_disabled(true);
 		codex_reject_button->set_disabled(true);
+	}
+	_refresh_chat();
+}
+
+void AIWorkspaceMainScreen::_refresh_chat() {
+	if (!message_history || !codex_adapter) {
+		return;
+	}
+	const Array history = codex_adapter->get_chat_history();
+	const bool follow_tail = history_scroll->get_v_scroll() >= history_scroll->get_v_scroll_bar()->get_max() - history_scroll->get_size().y - 24;
+	for (int i = message_history->get_child_count() - 1; i >= 0; i--) {
+		Node *child = message_history->get_child(i);
+		if (child != empty_state_center) {
+			memdelete(child);
+		}
+	}
+	empty_state_center->set_visible(history.is_empty());
+	for (int i = 0; i < history.size(); i++) {
+		const Dictionary message = history[i];
+		const String role = message.get("role", String());
+		const String status = message.get("status", String());
+		String heading = role == "user" ? TTRC("You") : (role == "proposal" ? TTRC("Codex proposal") : TTRC("Codex"));
+		if (!status.is_empty() && status != "completed" && status != "sent") {
+			heading += vformat(" (%s)", status);
+		}
+		Label *message_label = memnew(Label);
+		message_label->set_text(heading + "\n" + String(message.get("text", String())));
+		message_label->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+		message_label->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+		message_label->set_custom_minimum_size(Size2(0, 48) * EDSCALE);
+		message_history->add_child(message_label);
+	}
+	if (follow_tail && !history.is_empty()) {
+		history_scroll->set_v_scroll(history_scroll->get_v_scroll_bar()->get_max());
 	}
 }
 
@@ -375,7 +428,7 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	conversation_title->set_theme_type_variation("HeaderMedium");
 	conversation->add_child(conversation_title);
 
-	ScrollContainer *history_scroll = memnew(ScrollContainer);
+	history_scroll = memnew(ScrollContainer);
 	history_scroll->set_name("MessageHistoryScroll");
 	history_scroll->set_horizontal_scroll_mode(ScrollContainer::SCROLL_MODE_DISABLED);
 	history_scroll->set_h_size_flags(Control::SIZE_EXPAND_FILL);
@@ -388,7 +441,7 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	message_history->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	history_scroll->add_child(message_history);
 
-	CenterContainer *empty_state_center = memnew(CenterContainer);
+	empty_state_center = memnew(CenterContainer);
 	empty_state_center->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	empty_state_center->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	message_history->add_child(empty_state_center);
@@ -430,6 +483,27 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	send_button->set_v_size_flags(Control::SIZE_SHRINK_END);
 	composer->add_child(send_button);
 	send_button->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_send_codex_instruction));
+
+	stop_button = memnew(Button);
+	stop_button->set_name("StopButton");
+	stop_button->set_text(TTRC("Stop"));
+	stop_button->set_disabled(true);
+	stop_button->set_v_size_flags(Control::SIZE_SHRINK_END);
+	composer->add_child(stop_button);
+	stop_button->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_stop_codex_generation));
+
+	new_session_button = memnew(Button);
+	new_session_button->set_name("NewSessionButton");
+	new_session_button->set_text(TTRC("New Chat"));
+	new_session_button->set_disabled(true);
+	new_session_button->set_v_size_flags(Control::SIZE_SHRINK_END);
+	composer->add_child(new_session_button);
+	new_session_button->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_new_codex_session));
+
+	generation_status = memnew(Label);
+	generation_status->set_name("GenerationStatus");
+	generation_status->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_RIGHT);
+	conversation->add_child(generation_status);
 
 	codex_response_view = memnew(TextEdit);
 	codex_response_view->set_name("CodexResponseView");

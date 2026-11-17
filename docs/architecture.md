@@ -78,6 +78,14 @@ O adaptador reutiliza o `AIWorkspaceContextService` para anexar um snapshot some
 
 ## Agent Bridge local
 
+## Chat nativo e sessões do Codex
+
+A etapa 10 evolui `AIWorkspaceCodexAdapter` para manter uma conversa contínua sem alterar o runtime. Cada turno adiciona uma mensagem `user` e uma mensagem `assistant`; os eventos oficiais `item/agentMessage/delta` atualizam a segunda progressivamente e `turn/completed` fecha seu estado como `completed`, `interrupted` ou `failed`. A tela renderiza esse vetor em controles nativos dentro de um `ScrollContainer` e preserva a posição do usuário quando ele está lendo mensagens anteriores.
+
+O identificador da thread e um histórico limitado a 64 mensagens, com no máximo 32768 caracteres por texto, são gravados como metadados do projeto pelo `EditorSettings`. Nenhum token, credencial ou conteúdo de autenticação é salvo. Ao conectar, o adaptador tenta `thread/resume` para a thread persistida e inicia `thread/start` somente se a retomada não for possível. **New Chat** cria uma thread independente; a listagem de threads remotas não é exposta porque o App Server não fornece, nesse fluxo local, o histórico visual completo necessário para trocar de conversa sem misturar dados.
+
+**Stop** usa `turn/interrupt` com `threadId` e `turnId`, preserva os deltas já recebidos e marca o assistente como interrompido. Propostas continuam sendo dados pendentes no histórico e só chegam ao `AIWorkspaceCommandRouter` por aprovação humana; seus estados locais incluem `pending`, `rejected`, `executed` e `failed`. Solicitações de ferramentas/aprovações originadas pelo servidor são recusadas com erro JSON-RPC, pois esta etapa não expõe ferramentas ao Codex.
+
 A etapa 08 adiciona `AIWorkspaceAgentBridge` em `editor/ai_workspace/`. Ele usa as APIs nativas `TCPServer` e `StreamPeerTCP`, faz bind somente em `127.0.0.1:47831` e processa JSON delimitado por linha na thread principal do editor. O Bridge começa desativado, gera um segredo de sessão por ativação e reutiliza `AIWorkspaceContextService` e `AIWorkspaceCommandRouter` sem duplicar suas regras.
 
 `bridge.ping` e `context.get` são somente leitura. `command.execute` cria uma solicitação pendente e só é encaminhado ao Router após aprovação explícita na interface. O transporte não executa shell, não cria novos comandos e não altera o runtime.

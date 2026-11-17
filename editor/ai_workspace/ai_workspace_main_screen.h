@@ -32,6 +32,7 @@
 #include "scene/gui/margin_container.h"
 
 class Button;
+class CenterContainer;
 class AIWorkspaceCommandRouter;
 class AIWorkspaceContextService;
 class AIWorkspaceAgentBridge;
@@ -40,6 +41,7 @@ class Label;
 class LineEdit;
 class OptionButton;
 class PanelContainer;
+class ScrollContainer;
 class TextEdit;
 class TextureRect;
 class VBoxContainer;
@@ -51,12 +53,17 @@ class AIWorkspaceMainScreen : public MarginContainer {
 	Label *connection_value = nullptr;
 	Button *codex_connect_button = nullptr;
 	TextureRect *empty_state_icon = nullptr;
+	CenterContainer *empty_state_center = nullptr;
+	ScrollContainer *history_scroll = nullptr;
 	VBoxContainer *message_history = nullptr;
 	TextEdit *instruction_input = nullptr;
 	TextEdit *codex_response_view = nullptr;
 	Button *codex_approve_button = nullptr;
 	Button *codex_reject_button = nullptr;
 	Button *send_button = nullptr;
+	Button *stop_button = nullptr;
+	Button *new_session_button = nullptr;
+	Label *generation_status = nullptr;
 	Button *settings_button = nullptr;
 	Button *context_toggle_button = nullptr;
 	PanelContainer *context_panel = nullptr;
@@ -92,9 +99,12 @@ class AIWorkspaceMainScreen : public MarginContainer {
 	void _refresh_agent_bridge();
 	void _toggle_codex_connection();
 	void _send_codex_instruction();
+	void _stop_codex_generation();
+	void _new_codex_session();
 	void _approve_codex_request();
 	void _reject_codex_request();
 	void _refresh_codex();
+	void _refresh_chat();
 	void _refresh_context();
 
 protected:

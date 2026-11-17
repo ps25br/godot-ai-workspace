@@ -9,6 +9,7 @@
 
 #include "core/io/json.h"
 #include "core/os/os.h"
+#include "editor/settings/editor_settings.h"
 
 namespace {
 const String COMMAND_MARKER = "AI_WORKSPACE_COMMAND:";
@@ -16,6 +17,7 @@ const String COMMAND_MARKER = "AI_WORKSPACE_COMMAND:";
 
 AIWorkspaceCodexAdapter::AIWorkspaceCodexAdapter(AIWorkspaceContextService *p_context_service) {
 	context_service = p_context_service;
+	_load_persistent_state();
 }
 
 AIWorkspaceCodexAdapter::~AIWorkspaceCodexAdapter() {
@@ -37,6 +39,42 @@ String AIWorkspaceCodexAdapter::get_state_text() const {
 void AIWorkspaceCodexAdapter::_set_error(const String &p_error, State p_state) {
 	last_error = p_error;
 	state = p_state;
+}
+
+void AIWorkspaceCodexAdapter::_load_persistent_state() {
+	if (!EditorSettings::get_singleton()) {
+		return;
+	}
+	persisted_thread_id = EditorSettings::get_singleton()->get_project_metadata("ai_workspace_codex", "thread_id", String());
+	const String history_json = EditorSettings::get_singleton()->get_project_metadata("ai_workspace_codex", "history", String());
+	if (!history_json.is_empty()) {
+		const Variant parsed = JSON::parse_string(history_json);
+		if (parsed.get_type() == Variant::ARRAY) {
+			chat_history = parsed;
+			if (chat_history.size() > 64) {
+				chat_history.resize(64);
+			}
+		}
+	}
+}
+
+void AIWorkspaceCodexAdapter::_save_persistent_state() {
+	if (!EditorSettings::get_singleton()) {
+		return;
+	}
+	EditorSettings::get_singleton()->set_project_metadata("ai_workspace_codex", "thread_id", thread_id);
+	Array limited_history;
+	const int first = MAX(0, chat_history.size() - 64);
+	for (int i = first; i < chat_history.size(); i++) {
+		Dictionary message = chat_history[i];
+		String text = message.get("text", String());
+		if (text.length() > 32768) {
+			text = text.left(32768);
+		}
+		message["text"] = text;
+		limited_history.push_back(message);
+	}
+	EditorSettings::get_singleton()->set_project_metadata("ai_workspace_codex", "history", JSON::stringify(limited_history));
 }
 
 bool AIWorkspaceCodexAdapter::_is_authentication_error(const String &p_error) const {
@@ -119,6 +157,22 @@ Error AIWorkspaceCodexAdapter::connect_codex() {
 	return OK;
 }
 
+void AIWorkspaceCodexAdapter::_send_session_request(bool p_resume) {
+	Dictionary request;
+	request["id"] = int(next_request_id++);
+	thread_request_id = uint64_t(request["id"]);
+	request["method"] = p_resume ? "thread/resume" : "thread/start";
+	Dictionary params;
+	if (p_resume) {
+		params["threadId"] = persisted_thread_id;
+	}
+	request["params"] = params;
+	session_request = p_resume ? SESSION_REQUEST_RESUME : SESSION_REQUEST_START;
+	if (!_send(request)) {
+		_set_error(TTRC("Unable to initialize the Codex session"));
+	}
+}
+
 void AIWorkspaceCodexAdapter::_clear_process() {
 	if (stdio.is_valid()) {
 		stdio->close();
@@ -134,13 +188,66 @@ void AIWorkspaceCodexAdapter::_clear_process() {
 	process_id = 0;
 	receive_buffer = String();
 	turn_active = false;
+	active_turn_id = String();
+	interrupt_requested = false;
+	current_assistant_index = -1;
 }
 
 void AIWorkspaceCodexAdapter::disconnect() {
+	_save_persistent_state();
 	_clear_process();
 	thread_id = String();
+	active_turn_id = String();
 	state = STATE_DISCONNECTED;
 	last_error = String();
+}
+
+void AIWorkspaceCodexAdapter::_add_command_proposal() {
+	const int marker = response_text.find(COMMAND_MARKER);
+	if (marker < 0) {
+		return;
+	}
+	const String command_line = response_text.substr(marker + COMMAND_MARKER.length()).get_slice("\n", 0).strip_edges();
+	const Variant command = JSON::parse_string(command_line);
+	if (command.get_type() != Variant::DICTIONARY) {
+		return;
+	}
+	const Dictionary command_dictionary = command;
+	if (!command_dictionary.has("command") || !command_dictionary.has("args")) {
+		return;
+	}
+	pending_command_json = JSON::stringify(command_dictionary);
+	pending_command_summary = String(command_dictionary.get("command", TTRC("unknown command")));
+	Dictionary proposal;
+	proposal["role"] = "proposal";
+	proposal["text"] = pending_command_summary + "\n" + pending_command_json;
+	proposal["status"] = "pending";
+	proposal["command"] = pending_command_summary;
+	chat_history.push_back(proposal);
+	current_proposal_index = chat_history.size() - 1;
+}
+
+void AIWorkspaceCodexAdapter::_finish_turn(const String &p_status) {
+	if (!turn_active && current_assistant_index < 0) {
+		return;
+	}
+	turn_active = false;
+	active_turn_id = String();
+	interrupt_request_id = 0;
+	const String normalized_status = p_status.to_lower();
+	const String message_status = normalized_status == "interrupted" || interrupt_requested ? "interrupted" : (normalized_status == "completed" ? "completed" : "failed");
+	if (current_assistant_index >= 0 && current_assistant_index < chat_history.size()) {
+		Dictionary assistant = chat_history[current_assistant_index];
+		assistant["text"] = response_text;
+		assistant["status"] = message_status;
+		chat_history[current_assistant_index] = assistant;
+	}
+	if (message_status == "completed") {
+		_add_command_proposal();
+	}
+	interrupt_requested = false;
+	current_assistant_index = -1;
+	_save_persistent_state();
 }
 
 void AIWorkspaceCodexAdapter::_handle_line(const String &p_line) {
@@ -152,9 +259,25 @@ void AIWorkspaceCodexAdapter::_handle_line(const String &p_line) {
 }
 
 void AIWorkspaceCodexAdapter::_handle_message(const Dictionary &p_message) {
+	if (p_message.has("method") && p_message.has("id") && !p_message.has("result") && !p_message.has("error")) {
+		Dictionary error;
+		error["code"] = -32601;
+		error["message"] = TTRC("Godot AI Workspace does not expose Codex server-request tools in this stage");
+		Dictionary response;
+		response["id"] = p_message["id"];
+		response["error"] = error;
+		_send(response);
+		return;
+	}
 	if (p_message.has("error")) {
 		const Dictionary error = p_message["error"];
 		const String message = error.get("message", TTRC("Codex app-server request failed"));
+		const uint64_t error_id = uint64_t(int64_t(p_message.get("id", 0)));
+		if (error_id == thread_request_id && session_request == SESSION_REQUEST_RESUME && !_is_authentication_error(message)) {
+			persisted_thread_id = String();
+			_send_session_request(false);
+			return;
+		}
 		_set_error(_is_authentication_error(message) ? TTRC("Authentication required") : message, _is_authentication_error(message) ? STATE_AUTHENTICATION_REQUIRED : STATE_ERROR);
 		return;
 	}
@@ -164,12 +287,7 @@ void AIWorkspaceCodexAdapter::_handle_message(const Dictionary &p_message) {
 		Dictionary initialized;
 		initialized["method"] = "initialized";
 		_send(initialized);
-		Dictionary thread_start;
-		thread_start["id"] = int(next_request_id++);
-		thread_request_id = uint64_t(thread_start["id"]);
-		thread_start["method"] = "thread/start";
-		thread_start["params"] = Dictionary();
-		_send(thread_start);
+		_send_session_request(!persisted_thread_id.is_empty());
 		return;
 	}
 	if (id == thread_request_id && p_message.has("result")) {
@@ -179,36 +297,62 @@ void AIWorkspaceCodexAdapter::_handle_message(const Dictionary &p_message) {
 		if (thread_id.is_empty()) {
 			_set_error(TTRC("Codex app-server returned no thread id"));
 		} else {
+			if (session_request == SESSION_REQUEST_START) {
+				chat_history.clear();
+				response_text = String();
+			}
+			persisted_thread_id = thread_id;
+			_save_persistent_state();
 			state = STATE_CONNECTED;
 			last_error = String();
 		}
+		session_request = SESSION_REQUEST_NONE;
 		return;
 	}
 	if (method == "item/agentMessage/delta") {
 		const Dictionary params = p_message.get("params", Dictionary());
-		response_text += String(params.get("delta", String()));
+		const String event_turn_id = params.get("turnId", String());
+		if (!active_turn_id.is_empty() && !event_turn_id.is_empty() && event_turn_id != active_turn_id) {
+			return;
+		}
+		const String delta = params.get("delta", String());
+		response_text += delta;
+		if (current_assistant_index >= 0 && current_assistant_index < chat_history.size()) {
+			Dictionary assistant = chat_history[current_assistant_index];
+			assistant["text"] = response_text;
+			assistant["status"] = "generating";
+			chat_history[current_assistant_index] = assistant;
+		}
 		return;
 	}
 	if (method == "turn/completed") {
-		turn_active = false;
 		const Dictionary params = p_message.get("params", Dictionary());
 		const Dictionary turn = params.get("turn", Dictionary());
+		const String event_turn_id = turn.get("id", String());
+		if (!active_turn_id.is_empty() && !event_turn_id.is_empty() && event_turn_id != active_turn_id) {
+			return;
+		}
 		const String status = turn.get("status", String());
-		if (status != "completed" && !status.is_empty()) {
-			_set_error(vformat(TTRC("Codex turn ended with status: %s"), status));
-		}
-		const int marker = response_text.find(COMMAND_MARKER);
-		if (marker >= 0) {
-			String command_line = response_text.substr(marker + COMMAND_MARKER.length()).get_slice("\n", 0).strip_edges();
-			const Variant command = JSON::parse_string(command_line);
-			if (command.get_type() == Variant::DICTIONARY) {
-				const Dictionary command_dictionary = command;
-				if (command_dictionary.has("command") && command_dictionary.has("args")) {
-					pending_command_json = JSON::stringify(command_dictionary);
-					pending_command_summary = String(command_dictionary.get("command", TTRC("unknown command")));
-				}
-			}
-		}
+		_finish_turn(status.is_empty() ? String("completed") : status);
+		return;
+	}
+	if (method == "turn/started") {
+		const Dictionary params = p_message.get("params", Dictionary());
+		const Dictionary turn = params.get("turn", Dictionary());
+		active_turn_id = turn.get("id", active_turn_id);
+		return;
+	}
+	if (id == turn_request_id && p_message.has("result")) {
+		const Dictionary result = p_message["result"];
+		const Dictionary turn = result.get("turn", Dictionary());
+		active_turn_id = turn.get("id", active_turn_id);
+		return;
+	}
+	if (id == interrupt_request_id && p_message.has("result")) {
+		interrupt_request_id = 0;
+		return;
+	}
+	if (method == "thread/started") {
 		return;
 	}
 	if (method == "error") {
@@ -217,6 +361,11 @@ void AIWorkspaceCodexAdapter::_handle_message(const Dictionary &p_message) {
 		_set_error(_is_authentication_error(message) ? TTRC("Authentication required") : message, _is_authentication_error(message) ? STATE_AUTHENTICATION_REQUIRED : STATE_ERROR);
 		return;
 	}
+	if (method == "turn/failed") {
+		_finish_turn("failed");
+		return;
+	}
+	return;
 }
 
 void AIWorkspaceCodexAdapter::poll() {
@@ -251,7 +400,7 @@ void AIWorkspaceCodexAdapter::poll() {
 }
 
 Error AIWorkspaceCodexAdapter::send_instruction(const String &p_instruction) {
-	if (state != STATE_CONNECTED || thread_id.is_empty() || turn_active || p_instruction.strip_edges().is_empty()) {
+	if (state != STATE_CONNECTED || thread_id.is_empty() || turn_active || !pending_command_json.is_empty() || p_instruction.strip_edges().is_empty()) {
 		return ERR_INVALID_PARAMETER;
 	}
 	response_text = String();
@@ -273,6 +422,7 @@ Error AIWorkspaceCodexAdapter::send_instruction(const String &p_instruction) {
 	params["input"] = input_items;
 	Dictionary turn_start;
 	turn_start["id"] = int(next_request_id++);
+	turn_request_id = uint64_t(turn_start["id"]);
 	turn_start["method"] = "turn/start";
 	turn_start["params"] = params;
 	if (!_send(turn_start)) {
@@ -280,6 +430,66 @@ Error AIWorkspaceCodexAdapter::send_instruction(const String &p_instruction) {
 		return ERR_CANT_CONNECT;
 	}
 	turn_active = true;
+	Dictionary user_message;
+	user_message["role"] = "user";
+	user_message["text"] = p_instruction;
+	user_message["status"] = "sent";
+	chat_history.push_back(user_message);
+	Dictionary assistant_message;
+	assistant_message["role"] = "assistant";
+	assistant_message["text"] = String();
+	assistant_message["status"] = "generating";
+	chat_history.push_back(assistant_message);
+	current_assistant_index = chat_history.size() - 1;
+	current_proposal_index = -1;
+	return OK;
+}
+
+Error AIWorkspaceCodexAdapter::stop_generation() {
+	if (!turn_active || thread_id.is_empty() || active_turn_id.is_empty() || !stdio.is_valid()) {
+		return ERR_INVALID_PARAMETER;
+	}
+	Dictionary params;
+	params["threadId"] = thread_id;
+	params["turnId"] = active_turn_id;
+	Dictionary interrupt;
+	interrupt["id"] = int(next_request_id++);
+	interrupt_request_id = uint64_t(interrupt["id"]);
+	interrupt["method"] = "turn/interrupt";
+	interrupt["params"] = params;
+	interrupt_requested = true;
+	if (!_send(interrupt)) {
+		interrupt_requested = false;
+		_set_error(TTRC("Unable to interrupt Codex generation"));
+		return ERR_CANT_CONNECT;
+	}
+	return OK;
+}
+
+Error AIWorkspaceCodexAdapter::new_session() {
+	if (state != STATE_CONNECTED || turn_active) {
+		return ERR_BUSY;
+	}
+	persisted_thread_id = String();
+	thread_id = String();
+	chat_history.clear();
+	response_text = String();
+	pending_command_json = String();
+	pending_command_summary = String();
+	current_assistant_index = -1;
+	current_proposal_index = -1;
+	_send_session_request(false);
+	state = STATE_CONNECTING;
+	return OK;
+}
+
+Error AIWorkspaceCodexAdapter::resume_session(const String &p_thread_id) {
+	if (state != STATE_CONNECTED || turn_active || p_thread_id.is_empty()) {
+		return ERR_INVALID_PARAMETER;
+	}
+	persisted_thread_id = p_thread_id;
+	_send_session_request(true);
+	state = STATE_CONNECTING;
 	return OK;
 }
 
@@ -288,12 +498,26 @@ Dictionary AIWorkspaceCodexAdapter::approve_pending_command(AIWorkspaceCommandRo
 		return Dictionary();
 	}
 	const Dictionary result = p_command_router->execute_json(pending_command_json);
+	if (current_proposal_index >= 0 && current_proposal_index < chat_history.size()) {
+		Dictionary proposal = chat_history[current_proposal_index];
+		const bool success = result.get("success", false);
+		proposal["status"] = success ? "executed" : "failed";
+		proposal["result"] = JSON::stringify(result);
+		chat_history[current_proposal_index] = proposal;
+	}
 	pending_command_json = String();
 	pending_command_summary = String();
+	_save_persistent_state();
 	return result;
 }
 
 void AIWorkspaceCodexAdapter::reject_pending_command() {
+	if (current_proposal_index >= 0 && current_proposal_index < chat_history.size()) {
+		Dictionary proposal = chat_history[current_proposal_index];
+		proposal["status"] = "rejected";
+		chat_history[current_proposal_index] = proposal;
+	}
 	pending_command_json = String();
 	pending_command_summary = String();
+	_save_persistent_state();
 }

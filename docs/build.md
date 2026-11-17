@@ -237,6 +237,14 @@ Para a etapa 03, a primeira execução ([run 43963341537](https://github.com/ps2
 O commit `db712c98765` passou no workflow [44005636288](https://github.com/ps25br/godot-ai-workspace/actions/runs/44005636288), com artifact baixado em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\run-44005636288\godot.windows.editor.x86_64.exe`. A versão reportada foi `4.7.2.stable.gh.db712c987`. O executável foi exercitado com projeto temporário, incluindo teste gráfico da aba, persistência da associação no Inspector e três execuções headless consecutivas com código 0 e stderr vazio após a sessão gráfica. Uma execução headless inicial reproduziu a falha conhecida de estado persistido (`EditorNode::is_cmdline_mode`); ela não foi ocultada e as execuções subsequentes passaram.
 ## Agent Bridge local
 
+## Etapa 10 - chat nativo do Codex
+
+O chat usa o mesmo executável editor compilado remotamente e inicia `codex app-server --listen stdio://` somente quando **Connect Codex** é pressionado. O workflow não instala o Codex nem executa inferência durante a compilação; a máquina que abrir o artifact precisa ter o CLI instalado e autenticado.
+
+Para validar uma alteração C++: revise o diff e execute `git diff --check`; faça commit e push de `ai-workspace`; inicie o workflow **AI Workspace - Windows Build** nessa branch; acompanhe os logs; baixe `godot-ai-workspace-windows-x64` fora do repositório; execute `godot.windows.editor.x86_64.exe --version`; e então rode `--headless --editor --path <projeto-temporário> --quit`. Para teste real, abra o editor, conecte o Codex, envie uma pergunta curta e confirme deltas, `turn/completed`, **Stop**, **New Chat** e a retomada após reabrir o editor.
+
+O histórico visual é salvo como metadado do projeto, limitado a 64 mensagens/32768 caracteres, sem tokens. O cancelamento envia `turn/interrupt`; uma proposta nunca é executada automaticamente. A listagem de threads remotas permanece desativada nesta etapa porque a resposta local não inclui o histórico visual completo para uma troca segura. Registre sempre o commit compilado, a URL da execução, o artifact, a saída de `--version`, a saída headless e screenshots; não considere o build aprovado apenas por existir.
+
 O Bridge é desativado por padrão. No editor compilado, abra **AI Workspace** e pressione **Enable Local Bridge**. A interface mostra o endereço loopback, o segredo da sessão e os botões de aprovação. Para testes automatizados, use a ativação explícita por linha de comando:
 
 ```powershell
