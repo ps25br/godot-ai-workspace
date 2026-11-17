@@ -153,6 +153,14 @@ Não use o repositório oficial da Godot como `origin` e não execute `git push`
 
 Depois de futuras alterações em C++, confirme o estado local, faça commit apenas das alterações pretendidas e repita a execução manual do workflow. Compare o log, confirme `--version` e baixe o novo artifact antes de utilizá-lo.
 
+## Etapa 09 - integração Codex
+
+O workflow Windows compila também o adaptador nativo em `editor/ai_workspace/agents/codex/`. A execução local não exige compilador C++ nem SCons: abra o artifact gerado pelo GitHub Actions, confirme `--version` e use a aba **AI Workspace** para pressionar **Connect Codex**.
+
+O estado `Not installed` significa que `codex --version` não foi encontrado no `PATH`; `Authentication required` significa que o app-server iniciou, mas recusou a sessão por autenticação. O editor não lê nem armazena tokens. Logs do app-server não são copiados para o projeto e não devem ser compartilhados se contiverem dados sensíveis.
+
+Para repetir após alterações em C++, faça commit e push da branch `ai-workspace`, inicie manualmente `AI Workspace - Windows Build`, aguarde a conclusão, baixe `godot-ai-workspace-windows-x64` e execute `--version` e `--headless --editor --quit`. A validação de uma sessão Codex real requer uma máquina com o CLI instalado e autenticado; não declare essa parte aprovada sem evidência do processo e da resposta.
+
 ## Etapa 07 - cenas e recursos
 
 O Command Router também aceita os comandos estruturados abaixo na área técnica do AI Workspace:

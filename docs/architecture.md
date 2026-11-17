@@ -70,6 +70,12 @@ Criação de arquivos não sobrescreve destinos existentes e não implementa exc
 ### Validação da etapa 07
 
 O commit `db712c98765` foi compilado remotamente e validado com um projeto temporário. Foram testadas criação de cenas `Node2D`/`Node3D`, criação de `Gradient`/`GradientTexture2D`, associação de textura em `Sprite2D`, proteção contra alterações não salvas, abertura e salvamento de cenas, rejeição de sobrescrita e caminhos inválidos, incompatibilidade de recursos, Undo/Redo e persistência após reabertura do editor.
+## Adaptador Codex
+
+A etapa 09 adiciona `AIWorkspaceCodexAdapter` em `editor/ai_workspace/agents/codex/`. O adaptador inicia o processo oficial `codex app-server --listen stdio://` com argumentos fixos, conversa por JSON-RPC delimitado por linha e acompanha `initialize`, `initialized`, `thread/start`, `turn/start`, `item/agentMessage/delta` e `turn/completed`. O processo é criado por `OS::execute_with_pipe()` e nunca recebe um shell genérico.
+
+O adaptador reutiliza o `AIWorkspaceContextService` para anexar um snapshot somente leitura à instrução e o `AIWorkspaceCommandRouter` para propostas mutáveis aprovadas na interface. A linha `AI_WORKSPACE_COMMAND:` é uma convenção local do adaptador, não uma extensão do protocolo oficial do Codex; ela é tratada como dado não confiável e permanece pendente até aprovação explícita. O Agent Bridge TCP continua preservando o protocolo `ai-workspace/1` para clientes externos.
+
 ## Agent Bridge local
 
 A etapa 08 adiciona `AIWorkspaceAgentBridge` em `editor/ai_workspace/`. Ele usa as APIs nativas `TCPServer` e `StreamPeerTCP`, faz bind somente em `127.0.0.1:47831` e processa JSON delimitado por linha na thread principal do editor. O Bridge começa desativado, gera um segredo de sessão por ativação e reutiliza `AIWorkspaceContextService` e `AIWorkspaceCommandRouter` sem duplicar suas regras.

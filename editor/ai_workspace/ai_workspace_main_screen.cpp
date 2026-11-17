@@ -32,6 +32,7 @@
 #include "editor/ai_workspace/ai_workspace_command_router.h"
 #include "editor/ai_workspace/ai_workspace_context_service.h"
 #include "editor/ai_workspace/ai_workspace_agent_bridge.h"
+#include "editor/ai_workspace/agents/codex/ai_workspace_codex_adapter.h"
 
 #include "core/io/json.h"
 #include "core/object/callable_mp.h"
@@ -43,6 +44,7 @@
 #include "scene/gui/center_container.h"
 #include "scene/gui/label.h"
 #include "scene/gui/line_edit.h"
+#include "scene/gui/option_button.h"
 #include "scene/gui/panel_container.h"
 #include "scene/gui/scroll_container.h"
 #include "scene/gui/separator.h"
@@ -123,14 +125,74 @@ void AIWorkspaceMainScreen::_toggle_agent_bridge() {
 }
 
 void AIWorkspaceMainScreen::_approve_agent_request() {
+	if (codex_adapter->has_pending_command()) {
+		_approve_codex_request();
+		return;
+	}
 	agent_bridge->approve_pending_request();
 	_refresh_agent_bridge();
 	_refresh_context();
 }
 
 void AIWorkspaceMainScreen::_reject_agent_request() {
+	if (codex_adapter->has_pending_command()) {
+		_reject_codex_request();
+		return;
+	}
 	agent_bridge->reject_pending_request();
 	_refresh_agent_bridge();
+}
+
+void AIWorkspaceMainScreen::_toggle_codex_connection() {
+	if (codex_adapter->get_state() == AIWorkspaceCodexAdapter::STATE_CONNECTED || codex_adapter->get_state() == AIWorkspaceCodexAdapter::STATE_CONNECTING) {
+		codex_adapter->disconnect();
+	} else {
+		codex_adapter->connect_codex();
+	}
+	_refresh_codex();
+}
+
+void AIWorkspaceMainScreen::_send_codex_instruction() {
+	const Error error = codex_adapter->send_instruction(instruction_input->get_text());
+	if (error != OK) {
+		_refresh_codex();
+		return;
+	}
+	instruction_input->clear();
+	_refresh_codex();
+}
+
+void AIWorkspaceMainScreen::_approve_codex_request() {
+	const Dictionary result = codex_adapter->approve_pending_command(command_router);
+	command_result_view->set_text(JSON::stringify(result, "\t"));
+	_refresh_context();
+	_refresh_codex();
+}
+
+void AIWorkspaceMainScreen::_reject_codex_request() {
+	codex_adapter->reject_pending_command();
+	_refresh_codex();
+}
+
+void AIWorkspaceMainScreen::_refresh_codex() {
+	if (!codex_adapter) {
+		return;
+	}
+	connection_value->set_text(codex_adapter->get_state_text());
+	codex_connect_button->set_text(codex_adapter->get_state() == AIWorkspaceCodexAdapter::STATE_CONNECTED ? TTRC("Disconnect Codex") : TTRC("Connect Codex"));
+	send_button->set_disabled(codex_adapter->get_state() != AIWorkspaceCodexAdapter::STATE_CONNECTED);
+	if (!codex_adapter->get_response_text().is_empty()) {
+		codex_response_view->set_text(codex_adapter->get_response_text());
+	}
+	if (codex_adapter->has_pending_command()) {
+		bridge_pending->set_text(vformat(TTRC("Codex proposed command: %s"), codex_adapter->get_pending_command_summary()));
+		bridge_approve->set_disabled(false);
+		bridge_reject->set_disabled(false);
+	} else if (!agent_bridge->has_pending_request()) {
+		bridge_pending->set_text(TTRC("No pending command"));
+		bridge_approve->set_disabled(true);
+		bridge_reject->set_disabled(true);
+	}
 }
 
 void AIWorkspaceMainScreen::_refresh_agent_bridge() {
@@ -194,7 +256,9 @@ void AIWorkspaceMainScreen::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_PROCESS: {
 			agent_bridge->poll();
+			codex_adapter->poll();
 			_refresh_agent_bridge();
+			_refresh_codex();
 		} break;
 		case NOTIFICATION_THEME_CHANGED: {
 			empty_state_icon->set_texture(get_editor_theme_icon(SNAME("History")));
@@ -208,6 +272,7 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	context_service = memnew(AIWorkspaceContextService);
 	command_router = memnew(AIWorkspaceCommandRouter);
 	agent_bridge = memnew(AIWorkspaceAgentBridge(context_service, command_router));
+	codex_adapter = memnew(AIWorkspaceCodexAdapter(context_service));
 	set_process(true);
 	if (EditorNode::get_singleton() && EditorNode::get_singleton()->get_editor_selection()) {
 		EditorNode::get_singleton()->get_editor_selection()->connect("selection_changed", callable_mp(this, &AIWorkspaceMainScreen::_refresh_context));
@@ -248,10 +313,12 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	agent_label->set_text(TTRC("Agent:"));
 	header->add_child(agent_label);
 
-	agent_value = memnew(Label);
-	agent_value->set_text(TTRC("None"));
-	agent_value->set_theme_type_variation("HeaderSmall");
-	header->add_child(agent_value);
+	agent_selector = memnew(OptionButton);
+	agent_selector->set_name("AgentSelector");
+	agent_selector->add_item(TTRC("Codex"));
+	agent_selector->select(0);
+	agent_selector->set_tooltip_text(TTRC("Codex is the only integrated agent in this stage."));
+	header->add_child(agent_selector);
 
 	header->add_child(memnew(VSeparator));
 
@@ -263,6 +330,11 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	connection_value->set_text(TTRC("Disconnected"));
 	connection_value->set_theme_type_variation("HeaderSmall");
 	header->add_child(connection_value);
+
+	codex_connect_button = memnew(Button);
+	codex_connect_button->set_text(TTRC("Connect Codex"));
+	codex_connect_button->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_toggle_codex_connection));
+	header->add_child(codex_connect_button);
 
 	settings_button = memnew(Button);
 	settings_button->set_text(TTRC("Settings"));
@@ -353,6 +425,15 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	send_button->set_disabled(true);
 	send_button->set_v_size_flags(Control::SIZE_SHRINK_END);
 	composer->add_child(send_button);
+	send_button->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_send_codex_instruction));
+
+	codex_response_view = memnew(TextEdit);
+	codex_response_view->set_name("CodexResponseView");
+	codex_response_view->set_custom_minimum_size(Size2(0, 120) * EDSCALE);
+	codex_response_view->set_line_wrapping_mode(TextEdit::LINE_WRAPPING_BOUNDARY);
+	codex_response_view->set_editable(false);
+	codex_response_view->set_placeholder(TTRC("Codex response"));
+	conversation->add_child(codex_response_view);
 
 	command_test_toggle = memnew(Button);
 	command_test_toggle->set_name("CommandRouterTestToggle");
@@ -506,6 +587,7 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	_update_context_toggle_button();
 	_refresh_context();
 	_refresh_agent_bridge();
+	_refresh_codex();
 
 	String command_line_secret;
 	bool command_line_bridge = false;
@@ -525,6 +607,7 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 AIWorkspaceMainScreen::~AIWorkspaceMainScreen() {
 	set_process(false);
 	memdelete(agent_bridge);
+	memdelete(codex_adapter);
 	memdelete(command_router);
 	memdelete(context_service);
 }

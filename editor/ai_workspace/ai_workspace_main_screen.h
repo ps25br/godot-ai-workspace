@@ -35,8 +35,10 @@ class Button;
 class AIWorkspaceCommandRouter;
 class AIWorkspaceContextService;
 class AIWorkspaceAgentBridge;
+class AIWorkspaceCodexAdapter;
 class Label;
 class LineEdit;
+class OptionButton;
 class PanelContainer;
 class TextEdit;
 class TextureRect;
@@ -45,11 +47,13 @@ class VBoxContainer;
 class AIWorkspaceMainScreen : public MarginContainer {
 	GDCLASS(AIWorkspaceMainScreen, MarginContainer);
 
-	Label *agent_value = nullptr;
+	OptionButton *agent_selector = nullptr;
 	Label *connection_value = nullptr;
+	Button *codex_connect_button = nullptr;
 	TextureRect *empty_state_icon = nullptr;
 	VBoxContainer *message_history = nullptr;
 	TextEdit *instruction_input = nullptr;
+	TextEdit *codex_response_view = nullptr;
 	Button *send_button = nullptr;
 	Button *settings_button = nullptr;
 	Button *context_toggle_button = nullptr;
@@ -73,6 +77,7 @@ class AIWorkspaceMainScreen : public MarginContainer {
 	Label *bridge_status = nullptr;
 	Label *bridge_pending = nullptr;
 	LineEdit *bridge_secret = nullptr;
+	AIWorkspaceCodexAdapter *codex_adapter = nullptr;
 
 	void _toggle_context_panel();
 	void _update_context_toggle_button();
@@ -83,6 +88,11 @@ class AIWorkspaceMainScreen : public MarginContainer {
 	void _approve_agent_request();
 	void _reject_agent_request();
 	void _refresh_agent_bridge();
+	void _toggle_codex_connection();
+	void _send_codex_instruction();
+	void _approve_codex_request();
+	void _reject_codex_request();
+	void _refresh_codex();
 	void _refresh_context();
 
 protected:

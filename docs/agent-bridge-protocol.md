@@ -69,6 +69,10 @@ Respostas têm o mesmo `protocol` e `id`, com `success` e `result`; falhas usam 
 
 O Bridge e todas as chamadas ao Context Service/Command Router são processados na thread principal do editor. Ao desligar ou fechar o editor, a conexão e solicitações pendentes são encerradas; não há callbacks de thread secundária.
 
+## Integração com o Codex
+
+O Codex integrado ao editor usa o adaptador local descrito em `docs/codex-integration.md`. Ele não altera o contrato `ai-workspace/1` e não conecta um processo externo diretamente a objetos da Godot. O adaptador reutiliza as mesmas instâncias internas de Context Service e Command Router; clientes externos continuam usando `context.get` e `command.execute` através do Bridge autenticado.
+
 ## Cliente de teste
 
 `tools/ai_workspace_bridge_client.py` usa somente a biblioteca padrão do Python:
