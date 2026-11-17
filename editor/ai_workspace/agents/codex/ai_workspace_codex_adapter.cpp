@@ -52,7 +52,7 @@ void AIWorkspaceCodexAdapter::_resolve_codex_command() {
 	String node_executable;
 	for (const String &entry : path_entries) {
 		const String directory = entry.strip_edges();
-		if (!directory.is_empty() && FileAccess::file_exists(directory.path_join("node.exe"))) {
+		if (!directory.is_empty() && FileAccess::exists(directory.path_join("node.exe"))) {
 			node_executable = directory.path_join("node.exe");
 			break;
 		}
@@ -63,13 +63,13 @@ void AIWorkspaceCodexAdapter::_resolve_codex_command() {
 			continue;
 		}
 		const String native_executable = directory.path_join("codex.exe");
-		if (FileAccess::file_exists(native_executable)) {
+		if (FileAccess::exists(native_executable)) {
 			codex_executable = native_executable;
 			return;
 		}
 		const String npm_launcher = directory.path_join("codex.cmd");
 		const String npm_script = directory.path_join("node_modules").path_join("@openai").path_join("codex").path_join("bin").path_join("codex.js");
-		if (FileAccess::file_exists(npm_launcher) && !node_executable.is_empty() && FileAccess::file_exists(npm_script)) {
+		if (FileAccess::exists(npm_launcher) && !node_executable.is_empty() && FileAccess::exists(npm_script)) {
 			codex_executable = node_executable;
 			codex_script = npm_script;
 			return;
