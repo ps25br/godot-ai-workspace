@@ -41,6 +41,51 @@ void AIWorkspaceCodexAdapter::_set_error(const String &p_error, State p_state) {
 	state = p_state;
 }
 
+void AIWorkspaceCodexAdapter::_resolve_codex_command() {
+	codex_executable = "codex";
+	codex_script = String();
+	if (OS::get_singleton()->get_name() != "Windows") {
+		return;
+	}
+
+	const Vector<String> path_entries = OS::get_singleton()->get_environment("PATH").split(";", false);
+	String node_executable;
+	for (const String &entry : path_entries) {
+		const String directory = entry.strip_edges();
+		if (!directory.is_empty() && FileAccess::file_exists(directory.path_join("node.exe"))) {
+			node_executable = directory.path_join("node.exe");
+			break;
+		}
+	}
+	for (const String &entry : path_entries) {
+		const String directory = entry.strip_edges();
+		if (directory.is_empty()) {
+			continue;
+		}
+		const String native_executable = directory.path_join("codex.exe");
+		if (FileAccess::file_exists(native_executable)) {
+			codex_executable = native_executable;
+			return;
+		}
+		const String npm_launcher = directory.path_join("codex.cmd");
+		const String npm_script = directory.path_join("node_modules").path_join("@openai").path_join("codex").path_join("bin").path_join("codex.js");
+		if (FileAccess::file_exists(npm_launcher) && !node_executable.is_empty() && FileAccess::file_exists(npm_script)) {
+			codex_executable = node_executable;
+			codex_script = npm_script;
+			return;
+		}
+	}
+}
+
+void AIWorkspaceCodexAdapter::_prepare_codex_arguments(const List<String> &p_arguments, List<String> &r_arguments) const {
+	if (!codex_script.is_empty()) {
+		r_arguments.push_back(codex_script);
+	}
+	for (const String &argument : p_arguments) {
+		r_arguments.push_back(argument);
+	}
+}
+
 void AIWorkspaceCodexAdapter::_load_persistent_state() {
 	if (!EditorSettings::get_singleton()) {
 		return;
@@ -86,11 +131,14 @@ void AIWorkspaceCodexAdapter::detect() {
 	if (state == STATE_CONNECTING || state == STATE_CONNECTED) {
 		return;
 	}
+	_resolve_codex_command();
 	List<String> arguments;
 	arguments.push_back("--version");
+	List<String> resolved_arguments;
+	_prepare_codex_arguments(arguments, resolved_arguments);
 	String output;
 	int exit_code = -1;
-	const Error error = OS::get_singleton()->execute("codex", arguments, &output, &exit_code, false);
+	const Error error = OS::get_singleton()->execute(codex_executable, resolved_arguments, &output, &exit_code, false);
 	if (error != OK || exit_code != 0) {
 		_set_error(TTRC("Codex CLI was not found on PATH"), STATE_NOT_INSTALLED);
 		return;
@@ -122,7 +170,9 @@ Error AIWorkspaceCodexAdapter::connect_codex() {
 	arguments.push_back("app-server");
 	arguments.push_back("--listen");
 	arguments.push_back("stdio://");
-	const Dictionary process = OS::get_singleton()->execute_with_pipe("codex", arguments, false);
+	List<String> resolved_arguments;
+	_prepare_codex_arguments(arguments, resolved_arguments);
+	const Dictionary process = OS::get_singleton()->execute_with_pipe(codex_executable, resolved_arguments, false);
 	if (process.is_empty()) {
 		_set_error(TTRC("Unable to start Codex app-server"));
 		return ERR_CANT_CREATE;

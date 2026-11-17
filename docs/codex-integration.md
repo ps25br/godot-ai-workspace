@@ -22,6 +22,10 @@ O app-server oficial pode expor ferramentas de uma aplicação hospedeira, mas e
 
 ## Fluxo
 
+## Windows e instalação npm
+
+No Windows, uma instalação npm normalmente expõe `codex.cmd`, que funciona no PowerShell mas não é um executável nativo para `CreateProcess`. O adapter resolve o launcher no `PATH` e, quando necessário, executa diretamente o `node.exe` com `node_modules/@openai/codex/bin/codex.js`. Assim a Godot não depende de shell genérico e continua usando o transporte `stdio://`.
+
 1. Abra **AI Workspace** e pressione **Connect Codex**.
 2. Confirme o estado exibido: `Disconnected`, `Not installed`, `Authentication required`, `Connecting`, `Connected` ou `Error`.
 3. Envie uma instrução pelo campo existente. A resposta final aparece no painel de resposta.

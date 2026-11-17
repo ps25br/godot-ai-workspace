@@ -7,6 +7,7 @@
 #include "core/io/file_access.h"
 #include "core/os/process_id.h"
 #include "core/object/object.h"
+#include "core/templates/list.h"
 
 class AIWorkspaceCommandRouter;
 class AIWorkspaceContextService;
@@ -29,6 +30,8 @@ private:
 	Ref<FileAccess> stdio;
 	Ref<FileAccess> stderr_pipe;
 	ProcessID process_id = 0;
+	String codex_executable = "codex";
+	String codex_script;
 	State state = STATE_DISCONNECTED;
 	String receive_buffer;
 	String response_text;
@@ -56,6 +59,8 @@ private:
 	bool interrupt_requested = false;
 
 	bool _send(const Dictionary &p_message);
+	void _resolve_codex_command();
+	void _prepare_codex_arguments(const List<String> &p_arguments, List<String> &r_arguments) const;
 	void _handle_message(const Dictionary &p_message);
 	void _handle_line(const String &p_line);
 	void _set_error(const String &p_error, State p_state = STATE_ERROR);

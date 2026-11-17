@@ -253,6 +253,8 @@ O probe real do Codex autenticado confirmou `initialize`, `thread/start` e `thre
 
 ## Etapa 10 - chat nativo do Codex
 
+No Windows, o CLI instalado por npm pode aparecer como `codex.cmd`. O adapter do fork resolve esse launcher e usa diretamente o Node.js com o script oficial do pacote, porque `CreateProcess` não executa arquivos `.cmd` como o PowerShell. Confirme `codex --version` e `where.exe codex` no mesmo usuário que inicia a Godot.
+
 O chat usa o mesmo executável editor compilado remotamente e inicia `codex app-server --listen stdio://` somente quando **Connect Codex** é pressionado. O workflow não instala o Codex nem executa inferência durante a compilação; a máquina que abrir o artifact precisa ter o CLI instalado e autenticado.
 
 Para validar uma alteração C++: revise o diff e execute `git diff --check`; faça commit e push de `ai-workspace`; inicie o workflow **AI Workspace - Windows Build** nessa branch; acompanhe os logs; baixe `godot-ai-workspace-windows-x64` fora do repositório; execute `godot.windows.editor.x86_64.exe --version`; e então rode `--headless --editor --path <projeto-temporário> --quit`. Para teste real, abra o editor, conecte o Codex, envie uma pergunta curta e confirme deltas, `turn/completed`, **Stop**, **New Chat** e a retomada após reabrir o editor.
