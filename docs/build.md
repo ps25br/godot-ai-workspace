@@ -133,6 +133,20 @@ As três tentativas autorizadas desta etapa foram usadas. A terceira compilaçã
 
 ## Execução remota verificada
 
+## Etapa 05.1 - estabilização e validação do contexto
+
+O HEAD `4043f6262f1` foi compilado com sucesso na execução [43991944127](https://github.com/ps25br/godot-ai-workspace/actions/runs/43991944127). O artifact foi baixado em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\run-43991944127\godot.windows.editor.x86_64.exe` e confirmou `4.7.2.stable.gh.4043f6262` com `--version` e código de saída 0.
+
+Validações headless executadas contra o projeto temporário `C:\Users\win10\Documents\Godot AI Workspace-artifacts\context-test-project`:
+
+- `--headless --editor --quit`: código 0, stderr vazio.
+- `--headless --editor --path <projeto> --quit`: código 0, stderr vazio.
+- A variante exploratória `--quit-after 10` apresentou falha de encerramento do processo (`-1073741819`) e uma mensagem de singleton nulo; ela não foi usada como critério de aprovação, pois o comando oficial solicitado com `--quit` passou sem a mensagem.
+
+Validação visual realizada em `visual-ai-workspace-active.png`, `visual-context-selection.png`, `visual-context-json-data.png` e `visual-after-close-attempt.png`, na mesma pasta do artifact. Foram confirmados: aba AI Workspace, projeto e cena atuais, seleção de `Sprite (Sprite2D)`, um recurso vinculado, JSON somente leitura e atualização para “No scene open” após fechar a cena. O editor foi encerrado graficamente sem salvar alterações no projeto temporário.
+
+Não foram observados erros de conexão de sinais, referências inválidas ou mensagens de ciclo de vida no teste aprovado. Não houve alteração de código nesta subetapa e não houve compilação C++ local.
+
 O repositório público está disponível em [github.com/ps25br/godot-ai-workspace](https://github.com/ps25br/godot-ai-workspace), com `ai-workspace` como branch padrão.
 
 - Workflow: [AI Workspace - Windows Build](https://github.com/ps25br/godot-ai-workspace/actions/workflows/ai-workspace-windows.yml)
