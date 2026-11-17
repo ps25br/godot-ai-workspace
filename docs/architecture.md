@@ -29,3 +29,11 @@ As atualizações usam os sinais nativos `EditorNode::scene_changed`, `EditorNod
 A etapa 06 adiciona `AIWorkspaceCommandRouter` como a única entrada para alterações estruturadas na cena. O router aceita um objeto JSON com `command` e `args`, resolve somente caminhos relativos à raiz editada e retorna respostas formadas por `Dictionary`, sem expor ponteiros. A primeira versão possui apenas `node.create`, `node.set_property` e `node.delete`, com listas explícitas de tipos de nós e propriedades permitidos.
 
 Todas as alterações são registradas no histórico da cena pelo `EditorUndoRedoManager`. Criação e remoção preservam parent, índice e owner; alterações de propriedade guardam o valor anterior. O `SceneTreeEditor`, a seleção e o Inspector são atualizados pelos mecanismos nativos do editor. Uma área técnica recolhível em `AIWorkspaceMainScreen` permite testes manuais com JSON, sem habilitar o compositor principal nem introduzir comunicação externa.
+
+## Operações nativas de cenas e recursos
+
+A etapa 07 amplia o mesmo `AIWorkspaceCommandRouter` com `scene.create`, `scene.open`, `scene.save`, `resource.create` e `resource.assign`. Cenas novas são empacotadas por `PackedScene::pack()` e gravadas por `ResourceSaver`; abertura usa `EditorNode::open_scene()` e salvamento usa `EditorNode::save_scene_if_open()` somente quando a cena atual já possui caminho.
+
+Os tipos de raiz permitidos são `Node2D` e `Node3D`. Recursos criáveis são limitados a `Gradient` e `GradientTexture2D`, gravados como `.tres`. A associação inicial é somente `Sprite2D.texture` com um recurso compatível `Texture2D`. Caminhos precisam ser normalizados, começar por `res://`, usar extensões permitidas, não conter `..`, protocolos adicionais, separadores alternativos ou componentes simbólicos.
+
+Criação de arquivos não sobrescreve destinos existentes e não implementa exclusão. `resource.assign` usa `EditorUndoRedoManager` para restaurar o recurso anterior; abertura é navegação e bloqueia histórico não salvo; salvamento em disco não promete Undo/Redo. Nenhum recurso externo é alterado durante uma associação.

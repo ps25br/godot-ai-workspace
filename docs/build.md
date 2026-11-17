@@ -123,6 +123,22 @@ Não use o repositório oficial da Godot como `origin` e não execute `git push`
 
 Depois de futuras alterações em C++, confirme o estado local, faça commit apenas das alterações pretendidas e repita a execução manual do workflow. Compare o log, confirme `--version` e baixe o novo artifact antes de utilizá-lo.
 
+## Etapa 07 - cenas e recursos
+
+O Command Router também aceita os comandos estruturados abaixo na área técnica do AI Workspace:
+
+```json
+{"command":"scene.create","args":{"root_type":"Node2D","root_name":"Level","path":"res://scenes/level.tscn"}}
+{"command":"scene.open","args":{"path":"res://scenes/level.tscn"}}
+{"command":"scene.save","args":{}}
+{"command":"resource.create","args":{"type":"Gradient","path":"res://resources/my_gradient.tres"}}
+{"command":"resource.assign","args":{"node_path":"Sprite","property":"texture","resource_path":"res://textures/player.tres"}}
+```
+
+As operações de criação aceitam somente `Node2D`/`Node3D` para raízes e `Gradient`/`GradientTexture2D` para recursos `.tres`. A associação inicial aceita somente `Sprite2D.texture` com `Texture2D`. Caminhos precisam começar por `res://`, ser normalizados, não conter `..`, caminhos absolutos, `user://`, separadores alternativos, protocolos adicionais ou componentes simbólicos. Arquivos existentes são recusados e não há comando de exclusão.
+
+`resource.assign` é registrado no Undo/Redo nativo e restaura o recurso anterior. `scene.open` bloqueia a operação quando o histórico da cena atual está não salvo, evitando descarte silencioso. `scene.save` salva apenas a cena atual que já possui caminho; não abre Save As automaticamente e não promete Undo/Redo para a gravação em disco. Criação de cenas e recursos grava diretamente por `PackedScene`, `ResourceSaver` e APIs nativas equivalentes, sem modificar arquivos externos.
+
 ## Etapa 05 - contexto nativo do projeto
 
 O commit inicial `fa64de55389` adicionou o serviço nativo de contexto, a atualização por seleção/cena e a inspeção JSON somente leitura. A primeira compilação remota ([run 43989803900](https://github.com/ps25br/godot-ai-workspace/actions/runs/43989803900)) passou e gerou o artifact. O executável confirmou `4.7.2.stable.gh.fa64de553`.

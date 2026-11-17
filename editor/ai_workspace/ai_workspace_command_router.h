@@ -42,9 +42,15 @@ class AIWorkspaceCommandRouter : public Object {
 	Node *_get_edited_scene_root() const;
 	Node *_resolve_scene_node(Node *p_scene_root, const String &p_path) const;
 	bool _is_editable_scene_node(Node *p_node, Node *p_scene_root, bool p_allow_root) const;
+	bool _validate_project_path(const String &p_path, const String &p_extension, String &r_error) const;
 	Dictionary _create_node(const Dictionary &p_args);
 	Dictionary _set_node_property(const Dictionary &p_args);
 	Dictionary _delete_node(const Dictionary &p_args);
+	Dictionary _create_scene(const Dictionary &p_args);
+	Dictionary _open_scene(const Dictionary &p_args);
+	Dictionary _save_scene(const Dictionary &p_args);
+	Dictionary _create_resource(const Dictionary &p_args);
+	Dictionary _assign_resource(const Dictionary &p_args);
 
 public:
 	Dictionary execute(const Dictionary &p_request);
