@@ -133,7 +133,14 @@ void AIWorkspaceContextService::refresh() {
 	project["path"] = "res://";
 	new_context["project"] = project;
 
-	Node *scene_root = EditorNode::get_singleton() ? EditorNode::get_singleton()->get_edited_scene() : nullptr;
+	Node *scene_root = nullptr;
+	if (EditorNode::get_singleton()) {
+		EditorData &editor_data = EditorNode::get_editor_data();
+		const int edited_scene = editor_data.get_edited_scene();
+		if (edited_scene >= 0 && edited_scene < editor_data.get_edited_scene_count()) {
+			scene_root = editor_data.get_edited_scene_root(edited_scene);
+		}
+	}
 	Dictionary scene;
 	scene["path"] = scene_root ? scene_root->get_scene_file_path() : String();
 	scene["root"] = scene_root ? String(scene_root->get_name()) : String();

@@ -37,6 +37,7 @@ class AIWorkspaceEditorPlugin : public EditorPlugin {
 	GDCLASS(AIWorkspaceEditorPlugin, EditorPlugin);
 
 	AIWorkspaceMainScreen *ai_workspace = nullptr;
+	bool editor_signals_connected = false;
 
 public:
 	String get_plugin_name() const override;

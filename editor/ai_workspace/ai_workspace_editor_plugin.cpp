@@ -42,14 +42,20 @@ String AIWorkspaceEditorPlugin::get_plugin_name() const {
 
 void AIWorkspaceEditorPlugin::make_visible(bool p_visible) {
 	if (ai_workspace) {
+		if (!editor_signals_connected) {
+			EditorNode::get_singleton()->connect("scene_changed", callable_mp(ai_workspace, &AIWorkspaceMainScreen::refresh_context));
+			EditorNode::get_singleton()->connect("scene_closed", callable_mp(ai_workspace, &AIWorkspaceMainScreen::refresh_context).unbind(1));
+			editor_signals_connected = true;
+		}
 		ai_workspace->set_visible(p_visible);
+		if (p_visible) {
+			ai_workspace->refresh_context();
+		}
 	}
 }
 
 AIWorkspaceEditorPlugin::AIWorkspaceEditorPlugin() {
 	ai_workspace = memnew(AIWorkspaceMainScreen);
-	connect("scene_changed", callable_mp(ai_workspace, &AIWorkspaceMainScreen::refresh_context).unbind(1));
-	connect("scene_closed", callable_mp(ai_workspace, &AIWorkspaceMainScreen::refresh_context).unbind(1));
 
 	EditorNode::get_singleton()->get_editor_main_screen()->get_control()->add_child(ai_workspace);
 	ai_workspace->hide();
