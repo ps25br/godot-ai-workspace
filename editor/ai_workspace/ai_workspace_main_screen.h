@@ -70,4 +70,5 @@ protected:
 public:
 	AIWorkspaceMainScreen();
 	~AIWorkspaceMainScreen();
+	void refresh_context();
 };

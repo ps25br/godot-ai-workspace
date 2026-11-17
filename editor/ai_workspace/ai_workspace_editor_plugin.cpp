@@ -47,6 +47,8 @@ void AIWorkspaceEditorPlugin::make_visible(bool p_visible) {
 
 AIWorkspaceEditorPlugin::AIWorkspaceEditorPlugin() {
 	ai_workspace = memnew(AIWorkspaceMainScreen);
+	connect("scene_changed", callable_mp(ai_workspace, &AIWorkspaceMainScreen::refresh_context).unbind(1));
+	connect("scene_closed", callable_mp(ai_workspace, &AIWorkspaceMainScreen::refresh_context).unbind(1));
 
 	EditorNode::get_singleton()->get_editor_main_screen()->get_control()->add_child(ai_workspace);
 	ai_workspace->hide();

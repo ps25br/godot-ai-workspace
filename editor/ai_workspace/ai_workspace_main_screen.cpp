@@ -125,6 +125,10 @@ void AIWorkspaceMainScreen::_refresh_context() {
 	}
 }
 
+void AIWorkspaceMainScreen::refresh_context() {
+	_refresh_context();
+}
+
 void AIWorkspaceMainScreen::_notification(int p_what) {
 	if (p_what == NOTIFICATION_THEME_CHANGED) {
 		empty_state_icon->set_texture(get_editor_theme_icon(SNAME("History")));
@@ -135,12 +139,8 @@ void AIWorkspaceMainScreen::_notification(int p_what) {
 
 AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	context_service = memnew(AIWorkspaceContextService);
-	if (EditorNode::get_singleton()) {
-		EditorNode::get_singleton()->connect("scene_changed", callable_mp(this, &AIWorkspaceMainScreen::_refresh_context));
-		EditorNode::get_singleton()->connect("scene_closed", callable_mp(this, &AIWorkspaceMainScreen::_refresh_context).unbind(1));
-		if (EditorNode::get_singleton()->get_editor_selection()) {
-			EditorNode::get_singleton()->get_editor_selection()->connect("selection_changed", callable_mp(this, &AIWorkspaceMainScreen::_refresh_context));
-		}
+	if (EditorNode::get_singleton() && EditorNode::get_singleton()->get_editor_selection()) {
+		EditorNode::get_singleton()->get_editor_selection()->connect("selection_changed", callable_mp(this, &AIWorkspaceMainScreen::_refresh_context));
 	}
 
 	set_name("AIWorkspace");
