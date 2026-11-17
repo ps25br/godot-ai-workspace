@@ -17,3 +17,9 @@ A interface inicial contém somente o título, a descrição e o estado `No agen
 A etapa 04 mantém `AIWorkspaceEditorPlugin` como responsável apenas pelo ciclo de vida da tela principal e concentra o layout em `AIWorkspaceMainScreen`. A tela utiliza somente controles GUI nativos e estilos do tema do editor: um cabeçalho de estado, uma área de conversa rolável com compositor inativo e um painel lateral de contexto que pode ser recolhido.
 
 Os controles de entrada e as regiões de mensagens e contexto são mantidos como pontos estruturais para evolução posterior, sem implementar conexão com agentes, execução de comandos ou protocolos externos. O painel contextual reserva espaço para cena, nó, recursos e operações sem duplicar o viewport ou o Inspector nativos.
+
+## Serviço nativo de contexto
+
+A etapa 05 adiciona `AIWorkspaceContextService`, um serviço somente leitura em `editor/ai_workspace/`. Ele consulta o nome do projeto, a cena editada, a seleção atual e um conjunto limitado de propriedades editoriais e recursos diretamente associados aos nós selecionados. Nós removidos são revalidados por `ObjectDB` antes da coleta.
+
+As atualizações usam os sinais nativos `EditorNode::scene_changed`, `EditorNode::scene_closed` e `EditorSelection::selection_changed`; não há polling contínuo. `AIWorkspaceMainScreen` solicita um snapshot ao serviço e atualiza o painel contextual, mantendo as operações do agente vazias. O snapshot é composto por `Dictionary`/`Array` sem ponteiros e pode ser inspecionado como JSON somente leitura na própria interface.

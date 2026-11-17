@@ -29,7 +29,10 @@
 
 #include "ai_workspace_main_screen.h"
 
+#include "ai_workspace_context_service.h"
+
 #include "core/object/callable_mp.h"
+#include "editor/editor_node.h"
 #include "editor/themes/editor_scale.h"
 #include "scene/gui/box_container.h"
 #include "scene/gui/button.h"
@@ -51,7 +54,7 @@ void set_margin(MarginContainer *p_container, int p_margin) {
 	p_container->add_theme_constant_override(SNAME("margin_bottom"), p_margin);
 }
 
-void add_context_state(VBoxContainer *p_parent, const String &p_title, const String &p_empty_state) {
+Label *add_context_state(VBoxContainer *p_parent, const String &p_title, const String &p_empty_state) {
 	Label *title = memnew(Label);
 	title->set_text(p_title);
 	title->set_theme_type_variation("HeaderSmall");
@@ -61,6 +64,7 @@ void add_context_state(VBoxContainer *p_parent, const String &p_title, const Str
 	empty_state->set_text(p_empty_state);
 	empty_state->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
 	p_parent->add_child(empty_state);
+	return empty_state;
 }
 
 } // namespace
@@ -80,6 +84,47 @@ void AIWorkspaceMainScreen::_update_context_toggle_button() {
 	}
 }
 
+void AIWorkspaceMainScreen::_toggle_context_inspection() {
+	const bool inspection_visible = !context_json_view->is_visible();
+	context_json_view->set_visible(inspection_visible);
+	context_inspection_toggle->set_text(inspection_visible ? TTRC("Hide Context Data") : TTRC("Inspect Context"));
+	if (inspection_visible) {
+		context_json_view->set_text(context_service->get_context_json());
+	}
+}
+
+void AIWorkspaceMainScreen::_refresh_context() {
+	if (!context_service) {
+		return;
+	}
+	context_service->refresh();
+
+	const Dictionary snapshot = context_service->get_context();
+	const Dictionary project = snapshot["project"];
+	const Dictionary scene = snapshot["scene"];
+	const Array selection = snapshot["selection"];
+
+	const String project_name = project.get("name", TTRC("Unnamed project"));
+	project_value->set_text(project_name.is_empty() ? TTRC("Unnamed project") : project_name);
+	project_value->set_tooltip_text(String(project.get("path", String())));
+
+	const String scene_path = scene.get("path", String());
+	scene_value->set_text(scene_path.is_empty() ? TTRC("No scene open") : scene_path);
+
+	if (selection.is_empty()) {
+		selection_value->set_text(TTRC("No node selected"));
+	} else {
+		const Dictionary first_node = selection[0];
+		const String selection_summary = vformat(TTRC("%s (%s)"), String(first_node.get("name", String())), String(first_node.get("type", String())));
+		selection_value->set_text(selection.size() == 1 ? selection_summary : vformat(TTRC("%s + %d more nodes"), selection_summary, selection.size() - 1));
+	}
+
+	resources_value->set_text(vformat(TTRC("%d resource(s) linked to selection"), int(snapshot.get("resource_count", 0))));
+	if (context_json_view->is_visible()) {
+		context_json_view->set_text(context_service->get_context_json());
+	}
+}
+
 void AIWorkspaceMainScreen::_notification(int p_what) {
 	if (p_what == NOTIFICATION_THEME_CHANGED) {
 		empty_state_icon->set_texture(get_editor_theme_icon(SNAME("History")));
@@ -89,6 +134,15 @@ void AIWorkspaceMainScreen::_notification(int p_what) {
 }
 
 AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
+	context_service = memnew(AIWorkspaceContextService);
+	if (EditorNode::get_singleton()) {
+		EditorNode::get_singleton()->connect("scene_changed", callable_mp(this, &AIWorkspaceMainScreen::_refresh_context));
+		EditorNode::get_singleton()->connect("scene_closed", callable_mp(this, &AIWorkspaceMainScreen::_refresh_context).unbind(1));
+		if (EditorNode::get_singleton()->get_editor_selection()) {
+			EditorNode::get_singleton()->get_editor_selection()->connect("selection_changed", callable_mp(this, &AIWorkspaceMainScreen::_refresh_context));
+		}
+	}
+
 	set_name("AIWorkspace");
 	set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	set_v_size_flags(Control::SIZE_EXPAND_FILL);
@@ -244,7 +298,12 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	context->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	context->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	context->add_theme_constant_override(SNAME("separation"), 8 * EDSCALE);
-	context_margin->add_child(context);
+	ScrollContainer *context_scroll = memnew(ScrollContainer);
+	context_scroll->set_horizontal_scroll_mode(ScrollContainer::SCROLL_MODE_DISABLED);
+	context_scroll->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	context_scroll->set_v_size_flags(Control::SIZE_EXPAND_FILL);
+	context_margin->add_child(context_scroll);
+	context_scroll->add_child(context);
 
 	Label *context_title = memnew(Label);
 	context_title->set_text(TTRC("Project Context"));
@@ -257,13 +316,35 @@ AIWorkspaceMainScreen::AIWorkspaceMainScreen() {
 	context->add_child(context_description);
 
 	context->add_child(memnew(HSeparator));
-	add_context_state(context, TTRC("Selected Scene"), TTRC("No scene selected"));
+	project_value = add_context_state(context, TTRC("Project"), TTRC("Unnamed project"));
 	context->add_child(memnew(HSeparator));
-	add_context_state(context, TTRC("Selected Node"), TTRC("No node selected"));
+	scene_value = add_context_state(context, TTRC("Scene"), TTRC("No scene open"));
 	context->add_child(memnew(HSeparator));
-	add_context_state(context, TTRC("Related Resources"), TTRC("No related resources"));
+	selection_value = add_context_state(context, TTRC("Selection"), TTRC("No node selected"));
+	context->add_child(memnew(HSeparator));
+	resources_value = add_context_state(context, TTRC("Resources"), TTRC("No resources linked to selection"));
 	context->add_child(memnew(HSeparator));
 	add_context_state(context, TTRC("Agent Operations"), TTRC("No agent operations"));
 
+	context_inspection_toggle = memnew(Button);
+	context_inspection_toggle->set_text(TTRC("Inspect Context"));
+	context_inspection_toggle->set_tooltip_text(TTRC("Show the read-only structured context collected from the editor."));
+	context_inspection_toggle->connect("pressed", callable_mp(this, &AIWorkspaceMainScreen::_toggle_context_inspection));
+	context->add_child(context_inspection_toggle);
+
+	context_json_view = memnew(TextEdit);
+	context_json_view->set_name("ContextDataView");
+	context_json_view->set_custom_minimum_size(Size2(0, 180) * EDSCALE);
+	context_json_view->set_line_wrapping_mode(TextEdit::LINE_WRAPPING_BOUNDARY);
+	context_json_view->set_editable(false);
+	context_json_view->set_v_grow_direction(Control::GROW_DIRECTION_BEGIN);
+	context_json_view->hide();
+	context->add_child(context_json_view);
+
 	_update_context_toggle_button();
+	_refresh_context();
+}
+
+AIWorkspaceMainScreen::~AIWorkspaceMainScreen() {
+	memdelete(context_service);
 }
