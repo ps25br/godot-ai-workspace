@@ -31,6 +31,7 @@
 
 #include "ai_workspace_main_screen.h"
 
+#include "core/object/callable_mp.h"
 #include "editor/editor_main_screen.h"
 #include "editor/editor_node.h"
 #include "scene/gui/box_container.h"
