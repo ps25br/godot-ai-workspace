@@ -62,20 +62,27 @@ def main():
         request_message = message(args, "command.execute", {"command": args.command_name, "args": command_args})
     else:
         checks = [
-            ("ping", message(args, "bridge.ping")),
-            ("context", message(args, "context.get")),
-            ("unknown_method", message(args, "bridge.unknown")),
-            ("invalid_protocol", {**message(args, "bridge.ping"), "protocol": "ai-workspace/999"}),
+            ("ping", message(args, "bridge.ping", request_id="self-test-ping")),
+            ("context", message(args, "context.get", request_id="self-test-context")),
+            ("unknown_method", message(args, "bridge.unknown", request_id="self-test-unknown")),
+            ("invalid_protocol", {**message(args, "bridge.ping", request_id="self-test-protocol"), "protocol": "ai-workspace/999"}),
             ("invalid_json", None),
         ]
         for name, check in checks:
             if check is None:
                 raw = b"{not-json}\n"
                 with socket.create_connection((args.host, args.port), timeout=5) as connection:
+                    connection.settimeout(5)
                     connection.sendall(raw)
-                    result = json.loads(connection.recv(4096).decode("utf-8"))
+                    data = bytearray()
+                    while b"\n" not in data:
+                        chunk = connection.recv(4096)
+                        if not chunk:
+                            break
+                        data.extend(chunk)
+                    result = json.loads(bytes(data).split(b"\n", 1)[0].decode("utf-8"))
             else:
-                result = request(args, check, request_id=f"self-test-{name}")
+                result = request(args, check)
             print(json.dumps({name: result}, indent=2, sort_keys=True))
         oversized = {
             "protocol": "ai-workspace/1",
