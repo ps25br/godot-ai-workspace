@@ -78,6 +78,10 @@ O adaptador reutiliza o `AIWorkspaceContextService` para anexar um snapshot some
 
 ## Agent Bridge local
 
+### Validação complementar da etapa 10.1
+
+O probe independente confirmou o fluxo real do App Server com primeiro delta tardio, `turn/completed=completed`, `thread/resume` e interrupção com `turn/completed=interrupted`. Não foi feita alteração C++ porque o timeout inicial vinha da leitura bloqueante do probe, não do adaptador. A GUI continua sem screenshot por limitação do ambiente gráfico.
+
 ### Validação da etapa 10
 
 O commit de código `4d2fde81c47` passou no workflow Windows [44085486259](https://github.com/ps25br/godot-ai-workspace/actions/runs/44085486259). O artifact foi baixado em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\stage10-run-44085486259\godot.windows.editor.x86_64.exe`; `--version` retornou `4.7.2.stable.gh.4d2fde81c` com código 0 e `--headless --editor --path <projeto-temporário> --quit` retornou código 0 sem stderr relevante.

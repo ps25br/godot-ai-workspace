@@ -40,6 +40,10 @@ Não há listagem/troca de múltiplas threads remotas, renovação OAuth, login 
 
 ## Validação
 
+### Etapa 10.1
+
+O probe assíncrono `tools/ai_workspace_codex_probe.py` confirmou primeiro delta em 35,6 s, conclusão `completed` e retomada em 37,0 s. Com interrupção após o primeiro delta, confirmou `turn/completed=interrupted` e resposta de `turn/interrupt`. Esses resultados validam o protocolo real, mas não substituem a validação visual da tela Godot.
+
 ### Etapa 10
 
 O código do commit `4d2fde81c47` foi compilado no workflow [44085486259](https://github.com/ps25br/godot-ai-workspace/actions/runs/44085486259). O executável confirmou `4.7.2.stable.gh.4d2fde81c`; o teste headless com projeto temporário terminou com código 0. O CLI real respondeu a `initialize`, `thread/start` e `thread/resume`. A sondagem de turno não concluiu dentro do timeout e a GUI não permaneceu aberta para screenshot, logo streaming visual, Stop e retomada pela interface ainda exigem validação em uma sessão gráfica disponível.

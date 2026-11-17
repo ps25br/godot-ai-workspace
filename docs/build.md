@@ -237,6 +237,14 @@ Para a etapa 03, a primeira execução ([run 43963341537](https://github.com/ps2
 O commit `db712c98765` passou no workflow [44005636288](https://github.com/ps25br/godot-ai-workspace/actions/runs/44005636288), com artifact baixado em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\run-44005636288\godot.windows.editor.x86_64.exe`. A versão reportada foi `4.7.2.stable.gh.db712c987`. O executável foi exercitado com projeto temporário, incluindo teste gráfico da aba, persistência da associação no Inspector e três execuções headless consecutivas com código 0 e stderr vazio após a sessão gráfica. Uma execução headless inicial reproduziu a falha conhecida de estado persistido (`EditorNode::is_cmdline_mode`); ela não foi ocultada e as execuções subsequentes passaram.
 ## Agent Bridge local
 
+### Etapa 10.1 - probe e limites de validação
+
+O teste independente `tools/ai_workspace_codex_probe.py` usa leitura assíncrona de stdout/stderr e timeouts separados para inicialização, primeiro evento, inatividade e duração total. Ele envia `Responda apenas: OK.` e imprime somente tempos, nomes de eventos e estados.
+
+No Codex autenticado local, uma execução normal confirmou `initialize` em 773 ms, `thread/start` em 2261 ms, primeiro evento em 2262 ms, primeiro delta em 35603 ms, `turn/completed=completed` em 35707 ms e `thread/resume` em 36965 ms. A execução com `--interrupt-after-delta` confirmou primeiro delta em 51909 ms, `turn/completed=interrupted` em 52330 ms e resposta de `turn/interrupt` recebida.
+
+O atraso de dezenas de segundos até o primeiro delta é observado no App Server real e não deve ser tratado como falha imediata. A GUI compilada inicializou OpenGL, mas não manteve uma janela com título capturável neste ambiente; portanto não há screenshot nem aprovação visual automatizada nesta subetapa.
+
 ### Validação da etapa 10
 
 O commit `4d2fde81c47` passou na execução [44085486259](https://github.com/ps25br/godot-ai-workspace/actions/runs/44085486259). O artifact está em `C:\Users\win10\Documents\Godot AI Workspace-artifacts\stage10-run-44085486259\godot.windows.editor.x86_64.exe`; `--version` retornou `4.7.2.stable.gh.4d2fde81c` com código 0 e o teste `--headless --editor --path <projeto-temporário> --quit` retornou código 0.
