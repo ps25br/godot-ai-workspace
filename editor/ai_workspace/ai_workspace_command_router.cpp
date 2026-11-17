@@ -618,7 +618,7 @@ Dictionary AIWorkspaceCommandRouter::_save_scene(const Dictionary &p_args) {
 	}
 
 	EditorNode::get_singleton()->save_scene_if_open(path);
-	if (!FileAccess::file_exists(path)) {
+	if (!FileAccess::exists(path)) {
 		return _error(command, "SCENE_SAVE_FAILED", "The current scene could not be verified on disk after saving.");
 	}
 
